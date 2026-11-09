@@ -2,6 +2,10 @@
   <img src="assets/app-icon.png" alt="Agent Minibar logo" width="256" height="256">
 </p>
 
+<p align="center">
+  <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
+</p>
+
 <h1 align="center">Agent Minibar</h1>
 
 <p align="center">
