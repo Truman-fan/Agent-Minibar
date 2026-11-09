@@ -12,7 +12,7 @@ use crate::limits::RateLimits;
 use crate::{instances::ProviderId, settings::NotificationSettings};
 
 /// App User Model ID of the process (taskbar identity of its windows).
-pub const AUMID: &str = "dev.CodexMinibar";
+pub const AUMID: &str = "io.github.trumanfan.AgentMinibar";
 
 const NEW_WINDOW_MINIMUM_ADVANCE: Duration = Duration::minutes(5);
 
@@ -276,7 +276,7 @@ fn requested_by_user(notification: &Notification) -> bool {
         || crate::settings_window::is_open()
 }
 
-/// Registers the process AUMID so the taskbar and shell say "Codex Minibar".
+/// Registers the process AUMID so the taskbar and shell say "Agent Minibar".
 pub fn initialize() {
     #[cfg(windows)]
     if let Err(error) = windows_impl::initialize() {
@@ -416,7 +416,7 @@ fn update_available(version: &str, release_url: &str, installable: bool) -> Noti
         NotificationKind::Update,
         crate::i18n::tr("update-available-67fd3a"),
         &format!(
-            "Codex Minibar {version}. {}",
+            "Agent Minibar {version}. {}",
             crate::i18n::tr("a-new-release-is-ready-to-install")
         ),
     );
@@ -1230,7 +1230,7 @@ mod windows_impl {
 
     fn register_aumid() -> Result<()> {
         let key = format!(r"Software\Classes\AppUserModelId\{AUMID}");
-        set_reg_sz(&key, "DisplayName", "Codex Minibar")?;
+        set_reg_sz(&key, "DisplayName", "Agent Minibar")?;
         if let Some(icon) = icon_path() {
             // Shell IconUri wants a normal Windows path with backslashes.
             set_reg_sz(&key, "IconUri", &icon.to_string_lossy().replace('/', "\\"))?;

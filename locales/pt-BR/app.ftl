@@ -1,4 +1,4 @@
-# Codex Minibar — pt-BR
+# Agent Minibar — pt-BR
 # Full Fluent catalog; parameters and technical names remain unchanged.
 
 luna-reserve = Reserva Luna
@@ -663,7 +663,7 @@ msg-60-minutes = 60 minutos
 
 start-with-windows = Iniciar com o Windows
 
-open-codex-minibar-in-the-tray-when-you-sign-in = Abrir o Codex Minibar na bandeja ao entrar no Windows.
+open-agent-minibar-in-the-tray-when-you-sign-in = Abrir o Agent Minibar na bandeja ao entrar no Windows.
 
 refresh-interval = Intervalo de atualização
 
@@ -1338,7 +1338,7 @@ app-icon = Ícone do aplicativo
 
 widget = Widget { $v0 }
 
-the-codex-minibar-icon = O ícone do Codex Minibar
+the-agent-minibar-icon = O ícone do Agent Minibar
 
 style-no-indicators = { $style } · Sem indicadores
 
@@ -1362,7 +1362,7 @@ edit = Editar
 
 duplicate = Duplicar
 
-shows-the-codex-minibar-icon-in-the-notification-area-it-has-no-i = Mostra o ícone do Codex Minibar na área de notificação. Não há indicadores para configurar.
+shows-the-agent-minibar-icon-in-the-notification-area-it-has-no-i = Mostra o ícone do Agent Minibar na área de notificação. Não há indicadores para configurar.
 
 style = Estilo
 
@@ -1426,9 +1426,9 @@ english = English
 
 msg-russian = Русский
 
-codex-minibar-settings = Configurações do Codex Minibar
+agent-minibar-settings = Configurações do Agent Minibar
 
-welcome-to-codex-minibar = Bem-vindo ao Codex Minibar
+welcome-to-agent-minibar = Bem-vindo ao Agent Minibar
 
 exit = Sair
 
@@ -1750,7 +1750,7 @@ update-installing = Instalando atualização
 update-unpacking = Descompactando arquivos…
 
 # src/updater.rs
-update-restarting = Reiniciando o Codex Minibar
+update-restarting = Reiniciando o Agent Minibar
 
 # src/updater.rs
 update-restarting-body = O app será reaberto em instantes.
@@ -1850,7 +1850,7 @@ taskbar-style-glance = Resumo
 taskbar-style-glance-hint = O ícone do provedor ao lado de duas linhas de texto, como o botão do clima.
 taskbar-style-rings-hint = Um anel de progresso por cota, com o valor ao lado.
 taskbar-style-bars-hint = Barras de progresso finas ao lado do ícone do provedor.
-taskbar-menu-open = Abrir o Codex Minibar
+taskbar-menu-open = Abrir o Agent Minibar
 taskbar-menu-settings = Configurações dos widgets da barra de tarefas
 taskbar-menu-hide = Ocultar os widgets da barra de tarefas
 taskbar-card-left = Restam { $value }
@@ -2107,7 +2107,7 @@ banked-reset-applied = Redefinição acumulada aplicada
 linux-no-tray-title = Bandeja do sistema não encontrada
 
 # src/tray.rs
-linux-no-tray-body = Ative a extensão AppIndicator para ver o Codex Minibar no painel. Abra o Codex Minibar de novo para exibi-lo.
+linux-no-tray-body = Ative a extensão AppIndicator para ver o Agent Minibar no painel. Abra o Agent Minibar de novo para exibi-lo.
 
 # src/settings_window/general.rs
 start-at-login = Iniciar ao entrar na sessão
@@ -2167,3 +2167,37 @@ linux-popup-shortcut-choose = Definir atalho
 linux-popup-shortcut-dialog-hint = Pressione a combinação de teclas que deseja usar. Ela será salva como atalho personalizado nas configurações de teclado do seu ambiente de trabalho.
 linux-popup-shortcut-needs-modifier = Inclua Ctrl, Alt ou Super, ou use F13–F24.
 linux-popup-shortcut-save-failed = O ambiente de trabalho não aceitou o atalho. Tente novamente ou adicione o comando nas configurações de teclado dele.
+floating-circle = Círculo flutuante
+floating-circle-description = Mantém os anéis de cota acima de outros aplicativos mesmo com a barra de tarefas oculta. Arraste para mover e clique para abrir.
+floating-circle-color-mode = Cor da cota
+floating-circle-color-gradient = Muda com a cota
+floating-circle-label-5h = 5 h
+floating-circle-label-1w = 1 sem
+floating-circle-position = Posição do círculo flutuante
+floating-circle-position-description = Redefine o círculo para o canto superior direito da tela atual.
+qwen-code-cli-folder = Qwen Code CLI folder
+folder-with-qwen-exe-qwen-cmd-or-qwen-ps1 = Folder with qwen.exe, qwen.cmd, or qwen.ps1. Leave empty to find it automatically.
+reads-qwen-code-settings-and-local-token-history = Reads Qwen Code settings and local token history without using its credentials.
+qwen-local-data = Qwen local data
+qwen-code-cli = Qwen Code CLI
+found-qwen-code-settings-or-local-history = Found Qwen Code settings or local history.
+qwen-code-settings-and-local-history-not-found = Qwen Code settings and local history were not found.
+reads-deepseek-harness-root-agent-history = Reads root and delegated Agent token usage from local DeepSeek Harness sessions. Seeded sessions are excluded.
+reads-kimi-model-local-agent-history = Reads Kimi model usage from supported local agent histories. Kimi Code sub-agents are excluded.
+reads-domestic-model-local-agent-history = Reads this model family's token usage from supported local agent histories without accessing credentials.
+floating-circle-switch-target = Switch target
+floating-circle-add-second = Add second
+floating-circle-close-this = Close circle
+provider-tab-order = Provider order
+provider-tab-order-description = Click one icon, then its destination, or drag icons to reorder provider pages.
+floating-circle-primary-target = First circle target
+floating-circle-secondary-target = Second circle target
+floating-circle-target-description = Choose the provider account whose remaining quota this circle shows.
+floating-circle-second = Second floating circle
+floating-circle-second-description = Show one optional circle below the first. Both circles move together.
+floating-circle-card-balance = Balance
+floating-circle-card-quota = Quota
+floating-circle-not-authorized = Sign in
+floating-circle-temporarily-unavailable = Try later
+floating-circle-loading-quota = Loading
+floating-circle-no-quota-api = No quota API

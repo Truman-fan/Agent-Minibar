@@ -1,4 +1,4 @@
-### Codex Minibar application messages.
+### Agent Minibar application messages.
 ### Japanese translation; per-message English fallback. Keep $parameters unchanged.
 
 # src/provider_registry.rs
@@ -963,7 +963,7 @@ msg-60-minutes = 60分
 start-with-windows = Windows と同時に起動
 
 # src/settings_window/general.rs
-open-codex-minibar-in-the-tray-when-you-sign-in = サインイン時にトレイで Codex Minibar を開きます。
+open-agent-minibar-in-the-tray-when-you-sign-in = サインイン時にトレイで Agent Minibar を開きます。
 
 # src/settings_window/onboarding.rs
 refresh-interval = リフレッシュ間隔
@@ -1964,7 +1964,7 @@ app-icon = アプリアイコン
 widget = ウィジェット { $v0 }
 
 # src/settings_window/tray.rs
-the-codex-minibar-icon = Codex Minibar アイコン
+the-agent-minibar-icon = Agent Minibar アイコン
 
 # src/settings_window/tray.rs
 style-no-indicators = { $style } · インジケーターなし
@@ -2000,7 +2000,7 @@ edit = 編集
 duplicate = 複製
 
 # src/settings_window/tray.rs
-shows-the-codex-minibar-icon-in-the-notification-area-it-has-no-i = 通知領域に Codex Minibar アイコンを表示します。設定するインジケーターはありません。
+shows-the-agent-minibar-icon-in-the-notification-area-it-has-no-i = 通知領域に Agent Minibar アイコンを表示します。設定するインジケーターはありません。
 
 # src/settings_window/tray.rs
 style = スタイル
@@ -2096,10 +2096,10 @@ english = 英語
 msg-russian = Русский
 
 # application
-codex-minibar-settings = Codex Minibar の設定
+agent-minibar-settings = Agent Minibar の設定
 
 # application
-welcome-to-codex-minibar = Codex Minibar へようこそ
+welcome-to-agent-minibar = Agent Minibar へようこそ
 
 # application
 exit = 終了
@@ -2631,7 +2631,7 @@ update-installing = アップデートをインストール中
 update-unpacking = ファイルを展開しています…
 
 # src/updater.rs
-update-restarting = Codex Minibar を再起動しています
+update-restarting = Agent Minibar を再起動しています
 
 # src/updater.rs
 update-restarting-body = まもなくアプリが再び開きます。
@@ -2731,7 +2731,7 @@ taskbar-style-glance = ひと目
 taskbar-style-glance-hint = 天気ボタンのように、プロバイダーのアイコンと 2 行のテキストを表示します。
 taskbar-style-rings-hint = 利用枠ごとのプログレス リングと、その横の値を表示します。
 taskbar-style-bars-hint = プロバイダーのアイコンの横に細いプログレス バーを重ねて表示します。
-taskbar-menu-open = Codex Minibar を開く
+taskbar-menu-open = Agent Minibar を開く
 taskbar-menu-settings = タスク バー ウィジェットの設定
 taskbar-menu-hide = タスク バー ウィジェットを非表示
 taskbar-card-left = 残り { $value }
@@ -2988,7 +2988,7 @@ banked-reset-applied = 保存済みリセットを適用しました
 linux-no-tray-title = システムトレイが見つかりません
 
 # src/tray.rs
-linux-no-tray-body = パネルに Codex Minibar を表示するには AppIndicator 拡張機能を有効にしてください。Codex Minibar をもう一度起動すると開きます。
+linux-no-tray-body = パネルに Agent Minibar を表示するには AppIndicator 拡張機能を有効にしてください。Agent Minibar をもう一度起動すると開きます。
 
 # src/settings_window/general.rs
 start-at-login = ログイン時に起動
@@ -3048,3 +3048,37 @@ linux-popup-shortcut-choose = ショートカットを設定
 linux-popup-shortcut-dialog-hint = 使用したいキーの組み合わせを押してください。デスクトップのキーボード設定にカスタムショートカットとして保存されます。
 linux-popup-shortcut-needs-modifier = Ctrl、Alt、Super のいずれかを含めるか、F13～F24 を使用してください。
 linux-popup-shortcut-save-failed = デスクトップがショートカットを受け付けませんでした。再試行するか、キーボード設定でコマンドを追加してください。
+floating-circle = フローティングサークル
+floating-circle-description = タスクバーが非表示でも残りの割り当てリングを他のアプリより手前に表示します。ドラッグで移動し、クリックでポップアップを開きます。
+floating-circle-color-mode = クォータの色
+floating-circle-color-gradient = クォータに合わせて変化
+floating-circle-label-5h = 5時間
+floating-circle-label-1w = 1週間
+floating-circle-position = フローティングサークルの位置
+floating-circle-position-description = サークルを現在のディスプレイの右上に戻します。
+qwen-code-cli-folder = Qwen Code CLI folder
+folder-with-qwen-exe-qwen-cmd-or-qwen-ps1 = Folder with qwen.exe, qwen.cmd, or qwen.ps1. Leave empty to find it automatically.
+reads-qwen-code-settings-and-local-token-history = Reads Qwen Code settings and local token history without using its credentials.
+qwen-local-data = Qwen local data
+qwen-code-cli = Qwen Code CLI
+found-qwen-code-settings-or-local-history = Found Qwen Code settings or local history.
+qwen-code-settings-and-local-history-not-found = Qwen Code settings and local history were not found.
+reads-deepseek-harness-root-agent-history = Reads root and delegated Agent token usage from local DeepSeek Harness sessions. Seeded sessions are excluded.
+reads-kimi-model-local-agent-history = Reads Kimi model usage from supported local agent histories. Kimi Code sub-agents are excluded.
+reads-domestic-model-local-agent-history = Reads this model family's token usage from supported local agent histories without accessing credentials.
+floating-circle-switch-target = Switch target
+floating-circle-add-second = Add second
+floating-circle-close-this = Close circle
+provider-tab-order = Provider order
+provider-tab-order-description = Click one icon, then its destination, or drag icons to reorder provider pages.
+floating-circle-primary-target = First circle target
+floating-circle-secondary-target = Second circle target
+floating-circle-target-description = Choose the provider account whose remaining quota this circle shows.
+floating-circle-second = Second floating circle
+floating-circle-second-description = Show one optional circle below the first. Both circles move together.
+floating-circle-card-balance = Balance
+floating-circle-card-quota = Quota
+floating-circle-not-authorized = Sign in
+floating-circle-temporarily-unavailable = Try later
+floating-circle-loading-quota = Loading
+floating-circle-no-quota-api = No quota API

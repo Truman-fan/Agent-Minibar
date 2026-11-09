@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const plugin = path.join(root, "com.vertopolkalf.codex-minibar.sdPlugin");
+const plugin = path.join(root, "com.trumanshow.agent-minibar.sdPlugin");
 const bin = path.join(plugin, "bin");
 
 mkdirSync(bin, { recursive: true });

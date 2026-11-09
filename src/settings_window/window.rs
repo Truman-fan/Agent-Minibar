@@ -41,6 +41,12 @@ const TITLEBAR_HEIGHT: f32 = 44.0;
 const NAV_ITEM_HEIGHT: f32 = 36.0;
 const NAV_ITEM_GAP: f32 = 2.0;
 const CONTENT_MAX_WIDTH: f32 = 1000.0;
+/// Wide Settings windows reserve the screen-right strip occupied by the
+/// default always-on-top floating circle. Compact windows keep every DIP.
+// Centered page content moves by half the asymmetric right inset, so reserve
+// twice the panel width to clear the complete 96-DIP circle/card footprint.
+const FLOATING_CIRCLE_SAFE_INSET: f32 = 224.0;
+const FLOATING_CIRCLE_SAFE_INSET_MIN_WIDTH: f32 = 1200.0;
 /// Smooth wheel scrolling: one notch glides over this duration.
 const SCROLL_GLIDE: Duration = Duration::from_millis(140);
 
@@ -87,6 +93,8 @@ pub(crate) struct SettingsWindow {
     pub(super) status_revision: u64,
     language: crate::i18n::Language,
     pub(super) provider_dialog: Option<ProviderDialog>,
+    /// First provider picked by the click-then-click ordering control.
+    pub(super) provider_order_pick: Option<String>,
     pub(super) openrouter: OpenRouterSettingsSnapshot,
     pub(super) discovered_bricks: BTreeMap<String, String>,
     // Expanded cards (expanders, rules, tray widgets), by id.
@@ -224,6 +232,7 @@ impl SettingsWindow {
             status_revision: 0,
             language: crate::i18n::current_language(),
             provider_dialog: None,
+            provider_order_pick: None,
             openrouter: super::cached_openrouter_snapshot(),
             discovered_bricks: super::cached_discovered_popup_bricks(),
             expanded: HashSet::new(),
@@ -607,7 +616,7 @@ impl SettingsWindow {
 
     // ----- shell ------------------------------------------------------------
 
-    fn titlebar(&self, k: &Kit) -> AnyElement {
+    fn titlebar(&self, k: &Kit, maximized: bool) -> AnyElement {
         let theme = &k.theme;
         let caption = |id, glyph, area, close| kit::caption_button(k, id, glyph, area, close);
         kit::window_drag_area(div().id("settings-titlebar"))
@@ -633,6 +642,12 @@ impl SettingsWindow {
                 "caption-min",
                 "\u{E921}",
                 WindowControlArea::Min,
+                false,
+            ))
+            .child(caption(
+                "caption-max",
+                if maximized { "\u{E923}" } else { "\u{E922}" },
+                WindowControlArea::Max,
                 false,
             ))
             .child(caption(
@@ -1144,8 +1159,10 @@ impl SettingsWindow {
             .into_any_element()
     }
 
-    fn reorder_provider(&mut self, from: &str, to: &str, cx: &mut Context<Self>) {
+    pub(super) fn reorder_provider(&mut self, from: &str, to: &str, cx: &mut Context<Self>) {
+        self.provider_order_pick = None;
         if from == to {
+            cx.notify();
             return;
         }
         let (from, to) = (from.to_owned(), to.to_owned());
@@ -1169,6 +1186,28 @@ impl SettingsWindow {
         });
     }
 
+    /// Reorder across the complete configured list. The explicit ordering
+    /// control includes disabled providers too, unlike the sidebar's two
+    /// separate enabled/disabled groups.
+    pub(super) fn reorder_provider_any(&mut self, from: &str, to: &str, cx: &mut Context<Self>) {
+        self.provider_order_pick = None;
+        if from == to {
+            cx.notify();
+            return;
+        }
+        let (from, to) = (from.to_owned(), to.to_owned());
+        self.edit(cx, move |settings| {
+            let (Some(from), Some(to)) = (
+                settings.resolve_provider(&from),
+                settings.resolve_provider(&to),
+            ) else {
+                return;
+            };
+            let all = settings.provider_ids();
+            settings.reorder_providers(from, to, &all);
+        });
+    }
+
     fn page_body(
         &mut self,
         k: &mut Kit,
@@ -1183,7 +1222,10 @@ impl SettingsWindow {
                         crate::i18n::tr("appearance"),
                         self.appearance_page(k, window, cx),
                     ),
-                    Tab::Popup => (crate::i18n::tr("customize"), self.customize_page(k, cx)),
+                    Tab::Popup => (
+                        crate::i18n::tr("customize"),
+                        self.customize_page(k, window, cx),
+                    ),
                     Tab::Schedule => (
                         crate::i18n::tr("limit-activation"),
                         self.activation_page(k, cx),
@@ -1263,6 +1305,15 @@ impl SettingsWindow {
         self.step_scroll_glide(k);
         let page_key = self.page.key();
         let rows = self.page_body(k, window, cx);
+        let viewport_width = f32::from(window.viewport_size().width);
+        let reserve_floating_circle = cfg!(windows)
+            && self.settings.floating_circle_enabled
+            && viewport_width >= FLOATING_CIRCLE_SAFE_INSET_MIN_WIDTH;
+        let floating_circle_inset = k.fx.toggle(
+            fx::key("settings-floating-circle-safe-inset"),
+            reserve_floating_circle,
+            fx::NORMAL,
+        ) * FLOATING_CIRCLE_SAFE_INSET;
         let body = div()
             .flex()
             .flex_col()
@@ -1287,7 +1338,8 @@ impl SettingsWindow {
                 div()
                     .flex()
                     .justify_center()
-                    .px(px(40.0))
+                    .pl(px(40.0))
+                    .pr(px(40.0 + floating_circle_inset))
                     .pt(px(32.0))
                     .pb(px(48.0))
                     .child(body),
@@ -1356,7 +1408,7 @@ impl Render for SettingsWindow {
             self.page = first_provider_page(&self.settings.instances);
         }
 
-        let titlebar = self.titlebar(&k);
+        let titlebar = self.titlebar(&k, window.is_maximized());
         let sidebar_width = sidebar_width(f32::from(window.viewport_size().width));
         let sidebar_mode = self.mode;
         let sidebar = match sidebar_mode {
@@ -1472,11 +1524,11 @@ pub(super) struct Overlays {
 
 /// Drag payload for reordering providers in the sidebar.
 #[derive(Clone)]
-struct DraggedProvider {
-    id: String,
-    enabled: bool,
-    label: SharedString,
-    theme: Theme,
+pub(super) struct DraggedProvider {
+    pub(super) id: String,
+    pub(super) enabled: bool,
+    pub(super) label: SharedString,
+    pub(super) theme: Theme,
 }
 
 impl Render for DraggedProvider {

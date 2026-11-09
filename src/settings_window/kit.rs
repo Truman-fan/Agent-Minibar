@@ -2730,9 +2730,9 @@ pub(crate) fn scrollbar(k: &Kit, handle: &gpui::ScrollHandle) -> Option<AnyEleme
 
 /// A title bar caption button (minimize, maximize, close).
 ///
-/// Windows hit-tests these through `window_control_area`. GPUI ignores that
-/// on Linux, and GNOME draws no server-side frame, so there the buttons act
-/// on click and draw Phosphor icons instead of the Segoe glyph font.
+/// The buttons stay in the client area and draw their own marks on every
+/// platform. The settings window disables Windows' native caption button
+/// styles, so these are the only marks in both windowed and maximized states.
 pub(crate) fn caption_button(
     k: &Kit,
     id: &'static str,
@@ -2758,35 +2758,32 @@ pub(crate) fn caption_button(
         .flex()
         .items_center()
         .justify_center()
-        .text_size(px(10.0))
         .text_color(color)
         .bg(blend(gpui::transparent_black(), hover, t));
-    #[cfg(windows)]
-    let el = el
-        .font_family(theme.icon_font.clone())
-        .window_control_area(area)
-        // Occlude the drag area beneath so the button, not the caption,
-        // wins the non-client hit test.
-        .occlude()
-        .child(glyph);
-    #[cfg(not(windows))]
-    let el = {
-        let _ = glyph;
-        let name = match area {
-            gpui::WindowControlArea::Min => "minus",
-            gpui::WindowControlArea::Max => "copy",
-            _ => "x",
-        };
-        el.occlude()
-            // Keep the press from starting a window move underneath.
-            .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| cx.stop_propagation())
-            .on_click(move |_, window, _| match area {
-                gpui::WindowControlArea::Min => window.minimize_window(),
-                gpui::WindowControlArea::Max => window.zoom_window(),
-                _ => window.remove_window(),
-            })
-            .child(icon(name, 12.0, color))
+    // SVG/geometric marks avoid private-use font shaping and paint exactly
+    // once in the client title bar.
+    let mark = match area {
+        gpui::WindowControlArea::Min => icon("minus", 12.0, color).into_any_element(),
+        gpui::WindowControlArea::Max if glyph == "\u{E923}" => {
+            icon("copy", 12.0, color).into_any_element()
+        }
+        gpui::WindowControlArea::Max => div()
+            .size(px(10.0))
+            .border_1()
+            .border_color(color)
+            .into_any_element(),
+        _ => icon("x", 12.0, color).into_any_element(),
     };
+    let el = el.child(mark);
+    let el = el
+        .occlude()
+        // Keep the press from starting a window move underneath.
+        .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| cx.stop_propagation())
+        .on_click(move |_, window, _| match area {
+            gpui::WindowControlArea::Min => window.minimize_window(),
+            gpui::WindowControlArea::Max => window.zoom_window(),
+            _ => window.remove_window(),
+        });
     el.into_any_element()
 }
 

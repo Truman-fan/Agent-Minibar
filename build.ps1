@@ -16,9 +16,9 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $Root = $PSScriptRoot
-$ProductName = "Codex Minibar"
-$Publisher = "Codex Minibar"
-$AppExeName = "codex-minibar.exe"
+$ProductName = "Agent Minibar"
+$Publisher = "Truman_show"
+$AppExeName = "agent-minibar.exe"
 # Mirrored by Tauri — SourceForge HTML landings are not a real zip.
 $NsisVersion = "3.11"
 $NsisUrl = "https://github.com/tauri-apps/binary-releases/releases/download/nsis-$NsisVersion/nsis-$NsisVersion.zip"
@@ -26,7 +26,21 @@ $NsisUrl = "https://github.com/tauri-apps/binary-releases/releases/download/nsis
 # GPUI renders every window, so the portable package is the app binary plus
 # its assets; no UI framework runtime is redistributed.
 $RuntimeFiles = @(
-    "codex-minibar.exe"
+    "agent-minibar.exe"
+)
+
+# Only these assets are read from disk at runtime. Popup/Settings artwork,
+# fonts and notification sounds are embedded in the executable.
+$RuntimeAssets = @(
+    "icons\app-icon-64.png",
+    "troubleshoot.ps1"
+)
+
+$RuntimeDocuments = @(
+    "LICENSE",
+    "NOTICE",
+    "MODIFICATIONS.md",
+    "THIRD_PARTY_NOTICES.md"
 )
 
 $TargetMap = [ordered]@{
@@ -46,7 +60,7 @@ function Get-CargoVersion {
 }
 
 $RequiredRuntimeFiles = @(
-    "codex-minibar.exe"
+    "agent-minibar.exe"
 )
 
 function Copy-RuntimeItem {
@@ -180,9 +194,17 @@ function New-PortablePackage {
             -Optional:$optional
     }
 
-    Copy-RuntimeItem `
-        -Source (Join-Path $Root "assets") `
-        -Destination (Join-Path $PackageDir "assets")
+    foreach ($relative in $RuntimeAssets) {
+        Copy-RuntimeItem `
+            -Source (Join-Path (Join-Path $Root "assets") $relative) `
+            -Destination (Join-Path (Join-Path $PackageDir "assets") $relative)
+    }
+
+    foreach ($name in $RuntimeDocuments) {
+        Copy-RuntimeItem `
+            -Source (Join-Path $Root $name) `
+            -Destination (Join-Path $PackageDir $name)
+    }
 }
 
 function New-ZipFromDirectory {
@@ -372,7 +394,7 @@ try {
         }
 
         $releaseDir = Join-Path $Root "target\$triple\release"
-        $packageName = "codex-minibar-$Version-$archName"
+        $packageName = "agent-minibar-$Version-$archName"
         $packageDir = Join-Path $StageRoot $packageName
 
         Write-Host "==> packaging portable ($archName)"

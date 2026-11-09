@@ -493,7 +493,7 @@ void main() {
     }
     document.documentElement.dataset.theme = theme;
     heroShader?.setTheme(theme);
-    if (persist) localStorage.setItem("codex-minibar-theme", theme);
+    if (persist) localStorage.setItem("agent-minibar-theme", theme);
     if (!themeToggle) return;
 
     const nextTheme = theme === "light" ? "dark" : "light";
@@ -509,7 +509,7 @@ void main() {
   });
 
   systemTheme.addEventListener("change", (event) => {
-    if (localStorage.getItem("codex-minibar-theme")) return;
+    if (localStorage.getItem("agent-minibar-theme")) return;
     setTheme(event.matches ? "light" : "dark");
   });
 

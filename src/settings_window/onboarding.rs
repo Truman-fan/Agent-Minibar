@@ -57,6 +57,15 @@ fn detected_providers(settings: &Settings) -> [bool; DRIVERS] {
                 instance.kiro_crew_path.as_deref(),
                 instance.kiro_cli_path.as_deref(),
             ),
+            ProviderKind::DeepSeek => crate::deepseek::is_installed(instance.provider_id()),
+            ProviderKind::QwenCode => crate::qwen_code::is_installed(path),
+            ProviderKind::DeepSeekHarness
+            | ProviderKind::KimiCode
+            | ProviderKind::VolcengineArk
+            | ProviderKind::ZhipuGlm
+            | ProviderKind::MiniMaxCode
+            | ProviderKind::BaiduQianfan
+            | ProviderKind::TencentHunyuan => crate::domestic_agents::is_installed(driver, path),
         }
     })
 }
@@ -97,6 +106,14 @@ fn detection_note(driver: ProviderKind, found: bool) -> &'static str {
         }
         (ProviderKind::Kiro, false) => {
             crate::i18n::tr("not-found-install-kiro-ide-or-kiro-crew-or-sign-in-to-kiro-cli")
+        }
+        (ProviderKind::DeepSeek, true) => crate::i18n::tr("saved-api-key"),
+        (ProviderKind::DeepSeek, false) => crate::i18n::tr("needs-an-api-key"),
+        (ProviderKind::QwenCode, true) => {
+            crate::i18n::tr("found-qwen-code-settings-or-local-history")
+        }
+        (ProviderKind::QwenCode, false) => {
+            crate::i18n::tr("qwen-code-settings-and-local-history-not-found")
         }
         (_, true) => crate::i18n::tr("found-on-this-pc"),
         (_, false) => crate::i18n::tr("not-found-turn-it-on-if-it-s-installed-somewhere-else"),

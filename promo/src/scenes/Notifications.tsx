@@ -49,7 +49,7 @@ export const notificationTimeline = (offset = 0): Timed[] => [
         provider: "codex",
         name: "Codex",
         plan: "Pro",
-        account: "vertopolkaLF",
+        account: "Truman-fan",
         rows: [
           { q: { id: "c", title: "session", left: 100, reset: "4h 59m", ticks: 4 }, focused: true },
           { q: { id: "d", title: "weekly", left: 57, reset: "5d 2h", ticks: 6 }, focused: false },
@@ -64,14 +64,14 @@ export const notificationTimeline = (offset = 0): Timed[] => [
       id: "update",
       kind: "update",
       title: "Update Available",
-      body: "Codex Minibar 1.0.0. A new release is ready to install.",
+      body: "Agent Minibar 1.0.0. A new release is ready to install.",
       bodyLines: 2,
       actions: ["Update now", "What's new"],
     },
     replaces: [
       {
         at: offset + 4.9,
-        spec: { id: "update", kind: "update", title: "Downloading update", body: "Codex Minibar 1.0.0", progress: "sweep" },
+        spec: { id: "update", kind: "update", title: "Downloading update", body: "Agent Minibar 1.0.0", progress: "sweep" },
       },
       ...Array.from({ length: 25 }, (_, i) => ({
         at: offset + 5.7 + i * 0.06,
@@ -82,7 +82,7 @@ export const notificationTimeline = (offset = 0): Timed[] => [
         spec: {
           id: "update",
           kind: "success",
-          title: "Restarting Codex Minibar",
+          title: "Restarting Agent Minibar",
           body: "The app will reopen in a moment.",
           progress: 1,
         },

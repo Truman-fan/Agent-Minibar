@@ -1,6 +1,6 @@
 # Localization
 
-Codex Minibar uses embedded Mozilla Fluent catalogs. English is the source
+Agent Minibar uses embedded Mozilla Fluent catalogs. English is the source
 language. Complete translations are available in Russian, Brazilian Portuguese,
 Spanish, Simplified Chinese, Traditional Chinese, Japanese, German, French, Korean,
 and Turkish.
@@ -79,7 +79,7 @@ New card rows must follow the same pattern: measure both groups and use
 
 ### Pseudo-locale for layout QA
 
-Start the app with `CODEX_MINIBAR_PSEUDO_LOCALE=1` and select English. English
+Start the app with `AGENT_MINIBAR_PSEUDO_LOCALE=1` and select English. English
 copy becomes accented and about 40% longer (`Resets in` → `Réséts íñẋẋẋẋ`),
 which approximates long translations such as Portuguese or German. Numbers,
 names and other Fluent parameters stay unchanged. Check every popup surface
@@ -128,7 +128,7 @@ python tools/localization_inventory.py --revision ee75ce4
 ## Verification
 
 ```powershell
-cargo fmt --package codex-minibar --check
+cargo fmt --package agent-minibar --check
 cargo check
 cargo clippy --all-targets --all-features --locked -- -D warnings
 cargo test --all-targets --all-features --locked

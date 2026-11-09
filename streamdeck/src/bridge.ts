@@ -88,7 +88,7 @@ export interface CatalogResponse {
 type BridgeResponse = SnapshotResponse | CatalogResponse | { type: "accepted"; ok: boolean } | { type: "error"; ok: false; error: string };
 
 export class BridgeUnavailableError extends Error {
-  constructor(message = "Codex Minibar is not running") {
+  constructor(message = "Agent Minibar is not running") {
     super(message);
     this.name = "BridgeUnavailableError";
   }
@@ -96,12 +96,12 @@ export class BridgeUnavailableError extends Error {
 
 function endpointPath(): string {
   const appData = process.env.APPDATA ?? path.join(process.env.USERPROFILE ?? ".", "AppData", "Roaming");
-  return path.join(appData, "Codex Minibar", "Codex Minibar", "config", "streamdeck-bridge.json");
+  return path.join(appData, "Agent Minibar", "Agent Minibar", "config", "streamdeck-bridge.json");
 }
 
 function fallbackExecutablePath(): string {
   const localAppData = process.env.LOCALAPPDATA ?? path.join(process.env.USERPROFILE ?? ".", "AppData", "Local");
-  return path.join(localAppData, "Codex Minibar", "codex-minibar.exe");
+  return path.join(localAppData, "Agent Minibar", "agent-minibar.exe");
 }
 
 async function loadEndpoint(): Promise<BridgeEndpoint> {

@@ -942,11 +942,11 @@ data = { "" }
 rendering = { "" }
 
 # English source:
-# software-rendering = Software rendering
+# software-rendering = Compatibility rendering (recommended)
 software-rendering = { "" }
 
 # English source:
-# software-rendering-description = Draw windows on the CPU instead of the graphics card. Can help when a game keeps the GPU busy; animations may be less smooth.
+# software-rendering-description = Use Windows WARP instead of the graphics card. Avoids blank windows and prompts caused by graphics overlays such as NVIDIA's; animations may be slightly less smooth.
 software-rendering-description = { "" }
 
 # English source:
@@ -1474,8 +1474,8 @@ msg-60-minutes = { "" }
 start-with-windows = { "" }
 
 # English source:
-# open-codex-minibar-in-the-tray-when-you-sign-in = Open Codex Minibar in the tray when you sign in.
-open-codex-minibar-in-the-tray-when-you-sign-in = { "" }
+# open-agent-minibar-in-the-tray-when-you-sign-in = Open Agent Minibar in the tray when you sign in.
+open-agent-minibar-in-the-tray-when-you-sign-in = { "" }
 
 # English source:
 # refresh-interval = Refresh interval
@@ -2814,8 +2814,8 @@ app-icon = { "" }
 widget = { "" }
 
 # English source:
-# the-codex-minibar-icon = The Codex Minibar icon
-the-codex-minibar-icon = { "" }
+# the-agent-minibar-icon = The Agent Minibar icon
+the-agent-minibar-icon = { "" }
 
 # English source:
 # style-no-indicators = { $style } · No indicators
@@ -2862,8 +2862,8 @@ edit = { "" }
 duplicate = { "" }
 
 # English source:
-# shows-the-codex-minibar-icon-in-the-notification-area-it-has-no-i = Shows the Codex Minibar icon in the notification area. It has no indicators to set up.
-shows-the-codex-minibar-icon-in-the-notification-area-it-has-no-i = { "" }
+# shows-the-agent-minibar-icon-in-the-notification-area-it-has-no-i = Shows the Agent Minibar icon in the notification area. It has no indicators to set up.
+shows-the-agent-minibar-icon-in-the-notification-area-it-has-no-i = { "" }
 
 # English source:
 # style = Style
@@ -2990,12 +2990,12 @@ english = { "" }
 msg-russian = { "" }
 
 # English source:
-# codex-minibar-settings = Codex Minibar Settings
-codex-minibar-settings = { "" }
+# agent-minibar-settings = Agent Minibar Settings
+agent-minibar-settings = { "" }
 
 # English source:
-# welcome-to-codex-minibar = Welcome to Codex Minibar
-welcome-to-codex-minibar = { "" }
+# welcome-to-agent-minibar = Welcome to Agent Minibar
+welcome-to-agent-minibar = { "" }
 
 # English source:
 # exit = Exit
@@ -3697,7 +3697,7 @@ update-installing = { "" }
 update-unpacking = { "" }
 
 # English source:
-# update-restarting = Restarting Codex Minibar
+# update-restarting = Restarting Agent Minibar
 update-restarting = { "" }
 
 # English source:
@@ -3897,7 +3897,7 @@ taskbar-style-rings-hint = { "" }
 taskbar-style-bars-hint = { "" }
 
 # English source:
-# taskbar-menu-open = Open Codex Minibar
+# taskbar-menu-open = Open Agent Minibar
 taskbar-menu-open = { "" }
 
 # English source:
@@ -4395,7 +4395,7 @@ banked-reset-applied = { "" }
 linux-no-tray-title = { "" }
 
 # English source:
-# linux-no-tray-body = Enable the AppIndicator extension to see Codex Minibar in the panel. Launch Codex Minibar again to open it.
+# linux-no-tray-body = Enable the AppIndicator extension to see Agent Minibar in the panel. Launch Agent Minibar again to open it.
 linux-no-tray-body = { "" }
 
 # English source:
@@ -4489,3 +4489,71 @@ linux-runs-claude-code-s-own-login-for-name-with-its-config-folder-as-c = { "" }
 # English source:
 # linux-add-a-game-description = Games launched by Steam and games in Steam or Heroic libraries are detected on their own. Add any other program here.
 linux-add-a-game-description = { "" }
+# floating-circle = Floating circle
+floating-circle = { "" }
+# floating-circle-description = Keep quota rings above other apps even when the taskbar is hidden. Drag to move it; click to open the popup.
+floating-circle-description = { "" }
+# floating-circle-color-mode = Quota color
+floating-circle-color-mode = { "" }
+# floating-circle-color-gradient = Changes with quota
+floating-circle-color-gradient = { "" }
+# floating-circle-label-5h = 5h
+floating-circle-label-5h = { "" }
+# floating-circle-label-1w = 1w
+floating-circle-label-1w = { "" }
+# floating-circle-position = Floating circle position
+floating-circle-position = { "" }
+# floating-circle-position-description = Reset the circle to the top-right of the current display.
+floating-circle-position-description = { "" }
+# qwen-code-cli-folder = Qwen Code CLI folder
+qwen-code-cli-folder = { "" }
+# folder-with-qwen-exe-qwen-cmd-or-qwen-ps1 = Folder with qwen.exe, qwen.cmd, or qwen.ps1. Leave empty to find it automatically.
+folder-with-qwen-exe-qwen-cmd-or-qwen-ps1 = { "" }
+# reads-qwen-code-settings-and-local-token-history = Reads Qwen Code settings and local token history without using its credentials.
+reads-qwen-code-settings-and-local-token-history = { "" }
+# qwen-local-data = Qwen local data
+qwen-local-data = { "" }
+# qwen-code-cli = Qwen Code CLI
+qwen-code-cli = { "" }
+# found-qwen-code-settings-or-local-history = Found Qwen Code settings or local history.
+found-qwen-code-settings-or-local-history = { "" }
+# qwen-code-settings-and-local-history-not-found = Qwen Code settings and local history were not found.
+qwen-code-settings-and-local-history-not-found = { "" }
+# reads-deepseek-harness-root-agent-history = Reads root and delegated Agent token usage from local DeepSeek Harness sessions. Seeded sessions are excluded.
+reads-deepseek-harness-root-agent-history = { "" }
+# reads-kimi-model-local-agent-history = Reads Kimi model usage from supported local agent histories. Kimi Code sub-agents are excluded.
+reads-kimi-model-local-agent-history = { "" }
+# reads-domestic-model-local-agent-history = Reads this model family's token usage from supported local agent histories without accessing credentials.
+reads-domestic-model-local-agent-history = { "" }
+# floating-circle-switch-target = Switch target
+floating-circle-switch-target = { "" }
+# floating-circle-add-second = Add second
+floating-circle-add-second = { "" }
+# floating-circle-close-this = Close circle
+floating-circle-close-this = { "" }
+# provider-tab-order = Provider order
+provider-tab-order = { "" }
+# provider-tab-order-description = Click one icon, then its destination, or drag icons to reorder provider pages.
+provider-tab-order-description = { "" }
+# floating-circle-primary-target = First circle target
+floating-circle-primary-target = { "" }
+# floating-circle-secondary-target = Second circle target
+floating-circle-secondary-target = { "" }
+# floating-circle-target-description = Choose the provider account whose remaining quota this circle shows.
+floating-circle-target-description = { "" }
+# floating-circle-second = Second floating circle
+floating-circle-second = { "" }
+# floating-circle-second-description = Show one optional circle below the first. Both circles move together.
+floating-circle-second-description = { "" }
+# floating-circle-card-balance = Balance
+floating-circle-card-balance = { "" }
+# floating-circle-card-quota = Quota
+floating-circle-card-quota = { "" }
+# floating-circle-not-authorized = Sign in
+floating-circle-not-authorized = { "" }
+# floating-circle-temporarily-unavailable = Try later
+floating-circle-temporarily-unavailable = { "" }
+# floating-circle-loading-quota = Loading
+floating-circle-loading-quota = { "" }
+# floating-circle-no-quota-api = No quota API
+floating-circle-no-quota-api = { "" }

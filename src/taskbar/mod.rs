@@ -12,6 +12,8 @@
 #![cfg_attr(not(windows), allow(dead_code))]
 
 #[cfg(windows)]
+mod floating;
+#[cfg(windows)]
 mod host;
 pub(crate) mod model;
 #[cfg(windows)]
@@ -27,24 +29,84 @@ use std::sync::{
 use crate::{
     instances::ProviderId,
     limits::ProviderLimits,
-    settings::{Settings, TaskbarSettings},
+    settings::{FloatingCircleSlot, Settings, TaskbarSettings},
 };
 
 /// Horizontal space between neighboring widgets, in DIPs.
 pub(crate) const WIDGET_GAP: f32 = 4.0;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct FloatingCircleItem {
+    pub(crate) slot: FloatingCircleSlot,
+    pub(crate) widget: crate::settings::TaskbarWidget,
+}
 
 /// Settings the strip renders from.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Config {
     pub(crate) taskbar: TaskbarSettings,
     pub(crate) colored_icons: bool,
+    pub(crate) floating_circle_enabled: bool,
+    pub(crate) floating_circle_colors: crate::settings::FloatingCircleColors,
+    pub(crate) floating_circle_position: Option<crate::settings::PopupPosition>,
+    pub(crate) floating_circle_items: Vec<FloatingCircleItem>,
 }
 
 impl Config {
     fn from_settings(settings: &Settings) -> Self {
+        let enabled = settings.enabled_providers();
+        let first_visible = settings.taskbar.widgets.iter().find_map(|widget| {
+            widget
+                .provider()
+                .filter(|provider| enabled.contains(provider))
+                .map(|provider| (provider, widget.clone()))
+        });
+        let mut items = Vec::new();
+        for (index, configured) in settings.floating_circle_slots.iter().take(2).enumerate() {
+            let resolved = configured
+                .provider()
+                .filter(|provider| enabled.contains(provider))
+                .or_else(|| {
+                    (index == 0)
+                        .then(|| first_visible.as_ref().map(|(provider, _)| *provider))
+                        .flatten()
+                })
+                .or_else(|| (index == 0).then(|| enabled.first().copied()).flatten());
+            let Some(provider) = resolved else { continue };
+            let mut widget = settings
+                .taskbar
+                .widgets
+                .iter()
+                .find(|widget| widget.provider() == Some(provider))
+                .cloned()
+                .or_else(|| {
+                    first_visible
+                        .as_ref()
+                        .filter(|(candidate, _)| *candidate == provider)
+                        .map(|(_, widget)| widget.clone())
+                })
+                .unwrap_or_else(|| crate::settings::TaskbarWidget::for_provider(provider));
+            widget.style = crate::settings::TaskbarWidgetStyle::Nested;
+            widget.indicators.truncate(2);
+            for indicator in &mut widget.indicators {
+                indicator.limit_value = crate::settings::LimitValue::Remaining;
+                indicator.color_mode = crate::settings::TrayColorMode::Status;
+            }
+            widget.show_icon = true;
+            widget.show_labels = false;
+            widget.show_values = false;
+            widget.reset = crate::settings::TaskbarResetDisplay::Off;
+            let mut slot = configured.clone();
+            slot.provider_id = provider.id().into();
+            items.push(FloatingCircleItem { slot, widget });
+        }
         Self {
             taskbar: settings.taskbar.clone(),
             colored_icons: settings.use_colored_provider_icons,
+            floating_circle_enabled: settings.floating_circle_enabled,
+            floating_circle_colors: settings.floating_circle_colors,
+            floating_circle_position: settings.floating_circle_position.clone(),
+            floating_circle_items: items,
         }
     }
 }
@@ -57,6 +119,11 @@ pub enum Action {
         provider: Option<ProviderId>,
         anchor: (i32, i32),
         page: crate::settings::TaskbarClick,
+        /// A second floating-circle click must still dismiss the popup while
+        /// Settings is open; ordinary taskbar widgets retain live preview.
+        dismiss_on_outside_click: bool,
+        /// Which compact floating-circle slot opened the detail card.
+        floating_slot: Option<usize>,
     },
     /// Open Settings on the editor of this widget.
     Edit(String),
@@ -64,10 +131,18 @@ pub enum Action {
     Settings,
     /// Turn the widgets off.
     Hide,
-    /// The tray menu's own commands.
-    AppSettings,
+    /// Open the app's main Settings window.
+    AppSettings {
+        /// Taskbar/tray menus keep the quota surface visible as a live preview;
+        /// the floating circle's context action opens Settings by itself.
+        show_preview: bool,
+    },
     Update,
     Exit,
+    /// Persist the compact floating circle after a drag.
+    MoveFloatingCircle(crate::settings::PopupPosition),
+    /// Add or remove the optional second floating circle.
+    SetSecondFloatingCircle(bool),
 }
 
 static ACTIONS: Mutex<Vec<Action>> = Mutex::new(Vec::new());
@@ -120,11 +195,32 @@ pub fn take_actions() -> Vec<Action> {
         .unwrap_or_default()
 }
 
+/// Queue a clean application exit through the bridge so workers and persisted
+/// state are flushed before the process terminates.
+pub(crate) fn request_exit() {
+    post_action(Action::Exit);
+}
+
+pub(crate) fn request_second_floating_circle(enabled: bool) {
+    post_action(Action::SetSecondFloatingCircle(enabled));
+}
+
+/// The floating circle owns its own toggle. Its mouse press must not also be
+/// interpreted as a generic click outside the quota card.
+#[cfg(windows)]
+pub(crate) fn point_is_floating_circle(x: i32, y: i32) -> bool {
+    floating::contains_screen_point(x, y)
+}
+
 /// Publishes the latest settings. The host thread starts on the first
 /// publish that enables widgets and lives for the rest of the process.
 pub fn publish_settings(settings: &Settings) {
     #[cfg(windows)]
-    host::publish(host::Message::Config(Config::from_settings(settings)));
+    {
+        let config = Config::from_settings(settings);
+        host::publish(host::Message::Config(config.clone()));
+        floating::publish(floating::Message::Config(config));
+    }
     #[cfg(not(windows))]
     let _ = settings;
 }
@@ -231,9 +327,22 @@ pub(crate) fn preview(
 /// Publishes the latest limits snapshot.
 pub fn publish_limits(limits: &ProviderLimits) {
     #[cfg(windows)]
-    host::publish(host::Message::Limits(limits.clone()));
+    {
+        host::publish(host::Message::Limits(limits.clone()));
+        floating::publish(floating::Message::Limits(limits.clone()));
+    }
     #[cfg(not(windows))]
     let _ = limits;
+}
+
+/// Publishes provider-scoped read failures to the floating quota surface.
+/// Ordinary taskbar widgets keep their existing presentation; the floating
+/// circle needs this state so unavailable data is never mistaken for 0%.
+pub fn publish_provider_errors(errors: std::collections::HashMap<ProviderId, String>) {
+    #[cfg(windows)]
+    floating::publish(floating::Message::ProviderErrors(errors));
+    #[cfg(not(windows))]
+    let _ = errors;
 }
 
 #[cfg(all(test, windows))]
@@ -326,5 +435,52 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn floating_circle_reuses_a_compact_nested_widget() {
+        let mut settings = Settings::default();
+        settings.taskbar.widgets.clear();
+        settings.instances[0].enabled = true;
+        let provider = settings.enabled_providers()[0];
+        let config = Config::from_settings(&settings);
+        let widget = &config
+            .floating_circle_items
+            .first()
+            .expect("an enabled provider supplies the circle")
+            .widget;
+        assert_eq!(widget.provider(), Some(provider));
+        assert_eq!(widget.style, TaskbarWidgetStyle::Nested);
+        assert!(widget.indicators.len() <= 2);
+        assert!(widget.show_icon);
+        assert!(!widget.show_labels);
+        assert!(!widget.show_values);
+        assert!(widget.indicators.iter().all(|indicator| {
+            indicator.limit_value == crate::settings::LimitValue::Remaining
+                && indicator.color_mode == crate::settings::TrayColorMode::Status
+        }));
+        assert_eq!(widget.reset, crate::settings::TaskbarResetDisplay::Off);
+    }
+
+    #[test]
+    fn floating_circle_config_keeps_at_most_two_bound_slots() {
+        let mut settings = Settings::default();
+        settings.instances[0].enabled = true;
+        let provider = settings.enabled_providers()[0];
+        settings.floating_circle_slots = vec![
+            crate::settings::FloatingCircleSlot::for_provider(provider),
+            crate::settings::FloatingCircleSlot {
+                provider_id: provider.id().into(),
+            },
+            crate::settings::FloatingCircleSlot::for_provider(provider),
+        ];
+
+        let config = Config::from_settings(&settings);
+
+        assert_eq!(config.floating_circle_items.len(), 2);
+        assert_eq!(
+            config.floating_circle_items[1].slot.provider(),
+            Some(provider)
+        );
     }
 }

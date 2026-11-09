@@ -2,9 +2,7 @@
 
 use std::sync::{Arc, Mutex, mpsc};
 
-use anyhow::{Result, anyhow};
-use chrono::{DateTime, Utc};
-use codex_minibar::{
+use agent_minibar::{
     app::AppState,
     notifications,
     provider::start_enabled_workers_with_limits,
@@ -18,23 +16,28 @@ use codex_minibar::{
     },
     worker::WorkerEvent,
 };
+use anyhow::{Result, anyhow};
+use chrono::{DateTime, Utc};
 
 fn run() -> Result<()> {
-    codex_minibar::banked_reset::mark_process_start();
+    agent_minibar::banked_reset::mark_process_start();
+    if let Err(error) = agent_minibar::app_identity::migrate_legacy_storage() {
+        eprintln!("failed to migrate legacy Agent Minibar data: {error:#}");
+    }
     notifications::initialize();
     sync_installed_display_version();
     let path = Settings::default_path()?;
-    if codex_minibar::fake::enabled() {
-        codex_minibar::fake::seed_settings()?;
+    if agent_minibar::fake::enabled() {
+        agent_minibar::fake::seed_settings()?;
     }
-    codex_minibar::logger::initialize(&path)?;
+    agent_minibar::logger::initialize(&path)?;
     #[cfg(not(windows))]
     if let Err(error) =
-        futures::executor::block_on(codex_minibar::linux::identity::register_portal())
+        futures::executor::block_on(agent_minibar::linux::identity::register_portal())
     {
-        codex_minibar::logger::info(format!("Linux desktop portal identity: {error:#}"));
+        agent_minibar::logger::info(format!("Linux desktop portal identity: {error:#}"));
     }
-    if let Err(error) = codex_minibar::pricing::initialize() {
+    if let Err(error) = agent_minibar::pricing::initialize() {
         eprintln!("failed to hydrate pricing catalog: {error:#}");
     }
     let mut settings = Settings::load_or_create(&path)?;
@@ -50,11 +53,11 @@ fn run() -> Result<()> {
         // Let the update helper that relaunched us finish and drop its own
         // staging before the install directory is swept.
         std::thread::sleep(std::time::Duration::from_secs(30));
-        codex_minibar::updater::cleanup_install_dir();
+        agent_minibar::updater::cleanup_install_dir();
     });
     std::thread::spawn(|| {
-        if let Err(error) = codex_minibar::discovery::cleanup() {
-            codex_minibar::logger::info(format!(
+        if let Err(error) = agent_minibar::discovery::cleanup() {
+            agent_minibar::logger::info(format!(
                 "Codex CLI startup cache cleanup deferred: {error:#}"
             ));
         }
@@ -128,18 +131,18 @@ fn run() -> Result<()> {
         usage_actions_rx: Mutex::new(Some(usage_actions_rx)),
         updates: Arc::clone(&updates),
     });
-    codex_minibar::game_mode::set_settings_writer(state.settings_tx.clone());
-    codex_minibar::updater::install_runtime(Arc::clone(&updates), {
+    agent_minibar::game_mode::set_settings_writer(state.settings_tx.clone());
+    agent_minibar::updater::install_runtime(Arc::clone(&updates), {
         let state = Arc::clone(&state);
         move || state.shutdown_worker()
     });
 
     // Initializes the tray accent before any popup can be shown.
-    codex_minibar::theme::apply_appearance(state.settings.theme, state.settings.accent_color);
-    codex_minibar::popup_window::start(Arc::clone(&state));
-    codex_minibar::whats_new::start(&state.settings, just_updated);
+    agent_minibar::theme::apply_appearance(state.settings.theme, state.settings.accent_color);
+    agent_minibar::popup_window::start(Arc::clone(&state));
+    agent_minibar::whats_new::start(&state.settings, just_updated);
     if onboarding_needed {
-        codex_minibar::settings_window::open_onboarding();
+        agent_minibar::settings_window::open_onboarding();
     }
     // The GPUI thread owns every window and the bridge thread owns the tray;
     // both exit the process directly, so the main thread only stays alive.
@@ -159,7 +162,7 @@ fn show_error(message: &str) {
             .encode_wide()
             .chain(std::iter::once(0))
             .collect();
-        let caption: Vec<u16> = OsStr::new("Codex Minibar")
+        let caption: Vec<u16> = OsStr::new(agent_minibar::app_identity::PRODUCT_NAME)
             .encode_wide()
             .chain(std::iter::once(0))
             .collect();
@@ -182,7 +185,7 @@ fn main() {
     if troubleshoot::is_cli_request() {
         if let Err(error) = troubleshoot::launch_cli_picker() {
             show_error(&format!(
-                "Could not start Codex Minibar troubleshooting: {error:#}"
+                "Could not start Agent Minibar troubleshooting: {error:#}"
             ));
         }
         return;
@@ -193,20 +196,20 @@ fn main() {
         Ok(None) => return,
         Err(error) => {
             show_error(&format!(
-                "Codex Minibar could not enforce a single instance: {error:#}"
+                "Agent Minibar could not enforce a single instance: {error:#}"
             ));
             return;
         }
     };
     single_instance::SingleInstance::hold(instance);
-    if let Err(error) = codex_minibar::claude::cleanup_abandoned_logins() {
+    if let Err(error) = agent_minibar::claude::cleanup_abandoned_logins() {
         eprintln!("could not clean abandoned Claude sign-in directories: {error:#}");
     }
-    if let Err(error) = codex_minibar::codex::cleanup_abandoned_logins() {
+    if let Err(error) = agent_minibar::codex::cleanup_abandoned_logins() {
         eprintln!("could not clean abandoned Codex sign-in directories: {error:#}");
     }
     if let Err(error) = run() {
-        show_error(&format!("Codex Minibar failed: {error:#}"));
+        show_error(&format!("Agent Minibar failed: {error:#}"));
     }
     single_instance::release_for_update();
 }

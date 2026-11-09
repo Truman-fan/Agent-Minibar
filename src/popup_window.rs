@@ -9,6 +9,7 @@ use std::{
     collections::HashMap,
     sync::{
         Arc, LazyLock, Mutex,
+        atomic::{AtomicUsize, Ordering},
         mpsc::{Receiver, Sender},
     },
     thread,
@@ -28,9 +29,10 @@ use crate::{
         resets_brick_id, spending_brick_id, usage_brick_id,
     },
     settings::{
-        AccentColor, AppTheme, HomeCardLayout, HomeWidgetId, NotificationSettings,
-        PopupBackgroundMaterial, PopupSurface, PopupTabMode, PopupTheme, PopupVisibility,
-        ProviderKind, Settings, TimeFormat, TotalSpendPeriod, TotalSpendPresentation, TrayWidget,
+        AccentColor, AppTheme, FloatingCircleSlot, HomeCardLayout, HomeWidgetId,
+        NotificationSettings, PopupBackgroundMaterial, PopupSurface, PopupTabMode, PopupTheme,
+        PopupVisibility, ProviderKind, Settings, TimeFormat, TotalSpendPeriod,
+        TotalSpendPresentation, TrayWidget,
     },
     tray::{TrayManager, TrayMenuAction},
     updater::{UpdateController, UpdatePhase},
@@ -72,6 +74,23 @@ pub(crate) enum PendingPopupView {
 }
 
 static PENDING_POPUP_VIEW: Mutex<Option<PendingPopupView>> = Mutex::new(None);
+const NO_FLOATING_CIRCLE_SLOT: usize = usize::MAX;
+static FLOATING_CIRCLE_SLOT: AtomicUsize = AtomicUsize::new(NO_FLOATING_CIRCLE_SLOT);
+
+pub(crate) fn floating_circle_slot() -> Option<usize> {
+    match FLOATING_CIRCLE_SLOT.load(Ordering::Relaxed) {
+        NO_FLOATING_CIRCLE_SLOT => None,
+        slot => Some(slot),
+    }
+}
+
+fn set_floating_circle_slot(slot: Option<usize>) {
+    FLOATING_CIRCLE_SLOT.store(slot.unwrap_or(NO_FLOATING_CIRCLE_SLOT), Ordering::Relaxed);
+}
+
+pub(crate) fn clear_floating_circle_slot() {
+    set_floating_circle_slot(None);
+}
 
 /// Commands posted to the GPUI thread. Every variant is cheap to send from
 /// any thread; the GPUI side wakes through its foreground executor.
@@ -148,21 +167,30 @@ pub fn start(state: Arc<AppState>) {
 /// Requests a provider tab for the next popup show. The request is
 /// intentionally ephemeral, matching clicks from the tray and Stream Deck.
 pub fn request_provider_view(provider: ProviderId) {
-    request_view(PendingPopupView::Provider(provider));
+    request_view(PendingPopupView::Provider(provider), None);
 }
 
 pub fn request_home_view() {
-    request_view(PendingPopupView::Home);
+    request_view(PendingPopupView::Home, None);
 }
 
 /// Requests the page nearest `provider` for the next popup show: Home when
 /// it shows the instance, otherwise the instance's tab. Taskbar widgets
 /// open this way.
 pub fn request_nearest_view(provider: ProviderId) {
-    request_view(PendingPopupView::Nearest(provider));
+    request_view(PendingPopupView::Nearest(provider), None);
 }
 
-fn request_view(view: PendingPopupView) {
+pub(crate) fn request_floating_provider_view(provider: ProviderId, slot: usize) {
+    request_view(PendingPopupView::Provider(provider), Some(slot));
+}
+
+pub(crate) fn request_floating_home_view(slot: usize) {
+    request_view(PendingPopupView::Home, Some(slot));
+}
+
+fn request_view(view: PendingPopupView, floating_slot: Option<usize>) {
+    set_floating_circle_slot(floating_slot);
     if popup::is_visible() && !popup::is_closing() {
         // An open popup switches pages right away, with its usual slide.
         send_command(match view {

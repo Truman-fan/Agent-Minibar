@@ -1,4 +1,4 @@
-# Codex Minibar — zh-TW
+# Agent Minibar — zh-TW
 # Full Fluent catalog; parameters and technical names remain unchanged.
 
 luna-reserve = Luna 儲備額度
@@ -660,7 +660,7 @@ msg-60-minutes = 60 分鐘
 
 start-with-windows = 隨 Windows 啟動
 
-open-codex-minibar-in-the-tray-when-you-sign-in = 登入 Windows 時在系統匣中開啟 Codex Minibar。
+open-agent-minibar-in-the-tray-when-you-sign-in = 登入 Windows 時在系統匣中開啟 Agent Minibar。
 
 refresh-interval = 重新整理間隔
 
@@ -1335,7 +1335,7 @@ app-icon = 應用程式圖示
 
 widget = 小工具 { $v0 }
 
-the-codex-minibar-icon = Codex Minibar 圖示
+the-agent-minibar-icon = Agent Minibar 圖示
 
 style-no-indicators = { $style } · 無指示器
 
@@ -1359,7 +1359,7 @@ edit = 編輯
 
 duplicate = 複製
 
-shows-the-codex-minibar-icon-in-the-notification-area-it-has-no-i = 在通知區域顯示 Codex Minibar 圖示。沒有需要設定的指示器。
+shows-the-agent-minibar-icon-in-the-notification-area-it-has-no-i = 在通知區域顯示 Agent Minibar 圖示。沒有需要設定的指示器。
 
 style = 樣式
 
@@ -1423,9 +1423,9 @@ english = English
 
 msg-russian = Русский
 
-codex-minibar-settings = Codex Minibar 設定
+agent-minibar-settings = Agent Minibar 設定
 
-welcome-to-codex-minibar = 歡迎使用 Codex Minibar
+welcome-to-agent-minibar = 歡迎使用 Agent Minibar
 
 exit = 結束
 
@@ -1729,7 +1729,7 @@ update-installing = 正在安裝更新
 update-unpacking = 正在解壓檔案…
 
 # src/updater.rs
-update-restarting = 正在重新啟動 Codex Minibar
+update-restarting = 正在重新啟動 Agent Minibar
 
 # src/updater.rs
 update-restarting-body = 應用程式即將重新開啟。
@@ -1829,7 +1829,7 @@ taskbar-style-glance = 速覽
 taskbar-style-glance-hint = 服務供應商圖示旁邊顯示兩行文字，就像天氣按鈕。
 taskbar-style-rings-hint = 每個額度一個進度圓環，旁邊顯示數值。
 taskbar-style-bars-hint = 在服務供應商圖示旁邊堆疊細進度列。
-taskbar-menu-open = 開啟 Codex Minibar
+taskbar-menu-open = 開啟 Agent Minibar
 taskbar-menu-settings = 工作列小工具設定
 taskbar-menu-hide = 隱藏工作列小工具
 taskbar-card-left = 剩餘 { $value }
@@ -2086,7 +2086,7 @@ banked-reset-applied = 已套用已儲備重置
 linux-no-tray-title = 找不到系統匣
 
 # src/tray.rs
-linux-no-tray-body = 啟用 AppIndicator 擴充功能即可在面板中看到 Codex Minibar。再次啟動 Codex Minibar 即可開啟。
+linux-no-tray-body = 啟用 AppIndicator 擴充功能即可在面板中看到 Agent Minibar。再次啟動 Agent Minibar 即可開啟。
 
 # src/settings_window/general.rs
 start-at-login = 登入時啟動
@@ -2146,3 +2146,37 @@ linux-popup-shortcut-choose = 設定快捷鍵
 linux-popup-shortcut-dialog-hint = 按下要使用的組合鍵。它會作為自訂快捷鍵儲存到桌面的鍵盤設定中。
 linux-popup-shortcut-needs-modifier = 請包含 Ctrl、Alt 或 Super，或使用 F13–F24。
 linux-popup-shortcut-save-failed = 桌面未接受該快捷鍵。請重試，或在其鍵盤設定中新增命令。
+floating-circle = 浮動圓環
+floating-circle-description = 即使工作列隱藏，也在其他應用程式上方顯示剩餘額度圓環。拖曳可移動，點按可開啟彈出視窗。
+floating-circle-color-mode = 額度顏色
+floating-circle-color-gradient = 隨額度變化
+floating-circle-label-5h = 5小時
+floating-circle-label-1w = 1週
+floating-circle-position = 浮動圓環位置
+floating-circle-position-description = 將圓環重設到目前顯示器的右上角。
+qwen-code-cli-folder = Qwen Code CLI 資料夾
+folder-with-qwen-exe-qwen-cmd-or-qwen-ps1 = 包含 qwen.exe、qwen.cmd 或 qwen.ps1 的資料夾。留空即可自動尋找。
+reads-qwen-code-settings-and-local-token-history = 讀取 Qwen Code 設定與本機 Token 歷史，不使用其中的憑證。
+qwen-local-data = Qwen 本機資料
+qwen-code-cli = Qwen Code CLI
+found-qwen-code-settings-or-local-history = 已找到 Qwen Code 設定或本機歷史。
+qwen-code-settings-and-local-history-not-found = 找不到 Qwen Code 設定或本機歷史。
+reads-deepseek-harness-root-agent-history = 從本機 DeepSeek Harness 工作階段讀取根 Agent 與委派子 Agent 的 Token 用量，不統計種子工作階段。
+reads-kimi-model-local-agent-history = 從支援的本機 Agent 歷程讀取 Kimi 模型用量，不統計 Kimi Code 子 Agent。
+reads-domestic-model-local-agent-history = 從支援的本機 Agent 歷程讀取此模型系列的 Token 用量，不存取任何憑證。
+floating-circle-switch-target = 切換目標
+floating-circle-add-second = 新增第二圈
+floating-circle-close-this = 關閉此圈
+provider-tab-order = 提供商順序
+provider-tab-order-description = 先按一下圖示，再按一下目標位置；也可直接拖曳圖示。順序會同步到額度資訊卡。
+floating-circle-primary-target = 第一圈顯示目標
+floating-circle-secondary-target = 第二圈顯示目標
+floating-circle-target-description = 選擇此懸浮圈顯示剩餘額度的提供者帳戶。
+floating-circle-second = 第二懸浮圈
+floating-circle-second-description = 在第一圈下方顯示一個可選的第二圈，兩個懸浮圈一起移動。
+floating-circle-card-balance = 餘額
+floating-circle-card-quota = 額度
+floating-circle-not-authorized = 未授權
+floating-circle-temporarily-unavailable = 暫不可用
+floating-circle-loading-quota = 取得中
+floating-circle-no-quota-api = 無額度介面

@@ -91,7 +91,7 @@ impl CommandCodeClient {
             .get(&format!("{API_BASE}{path}"))
             .set("Authorization", &format!("Bearer {api_key}"))
             .set("Accept", "application/json")
-            .set("User-Agent", "Codex Minibar")
+            .set("User-Agent", "Agent Minibar")
             .call()
         {
             Ok(response) => response,

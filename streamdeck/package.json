@@ -1,5 +1,5 @@
 {
-  "name": "codex-minibar-streamdeck",
+  "name": "agent-minibar-streamdeck",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -7,9 +7,9 @@
     "test": "node scripts/test.mjs",
     "build": "rollup -c && node scripts/sync-manifest.mjs",
     "dev": "streamdeck dev",
-    "reload": "streamdeck dev && streamdeck restart com.vertopolkalf.codex-minibar",
-    "install:reload": "npm run build && streamdeck dev && streamdeck link com.vertopolkalf.codex-minibar.sdPlugin && streamdeck restart com.vertopolkalf.codex-minibar",
-    "pack": "npm run build && streamdeck pack com.vertopolkalf.codex-minibar.sdPlugin --output ../data --force --no-update-check"
+    "reload": "streamdeck dev && streamdeck restart com.trumanshow.agent-minibar",
+    "install:reload": "npm run build && streamdeck dev && streamdeck link com.trumanshow.agent-minibar.sdPlugin && streamdeck restart com.trumanshow.agent-minibar",
+    "pack": "npm run build && streamdeck pack com.trumanshow.agent-minibar.sdPlugin --output ../data --force --no-update-check"
   },
   "dependencies": {
     "@elgato/streamdeck": "^2.1.2"

@@ -735,7 +735,7 @@ fn read_live_usage_limits() -> Result<RateLimits> {
         .set("Accept", "application/json")
         .set(
             "User-Agent",
-            concat!("Codex Minibar/", env!("CARGO_PKG_VERSION")),
+            concat!("Agent Minibar/", env!("CARGO_PKG_VERSION")),
         );
     if token.auth_method.as_deref().is_some_and(is_external_idp) {
         request = request.set("TokenType", "EXTERNAL_IDP");

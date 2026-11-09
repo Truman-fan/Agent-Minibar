@@ -36,7 +36,7 @@ fn provider_pages_are_keyed_by_instance() {
     assert_eq!(Page::Root(Tab::Popup).key(), "settings-page-customize");
 }
 
-fn instances(mask: u32, extra_claude: bool) -> Vec<ProviderInstance> {
+fn instances(mask: u64, extra_claude: bool) -> Vec<ProviderInstance> {
     let mut instances = Settings::default().instances;
     if extra_claude {
         let mut work = ProviderInstance::new(ProviderKind::Claude, "Work");
@@ -48,16 +48,23 @@ fn instances(mask: u32, extra_claude: bool) -> Vec<ProviderInstance> {
         instances.insert(index + 1, work);
     }
     for (index, instance) in instances.iter_mut().enumerate() {
-        instance.enabled = mask & (1 << index) != 0;
+        instance.enabled = mask & (1_u64 << index) != 0;
     }
     instances
 }
 
 #[test]
-fn provider_nav_keeps_identity_and_order_for_every_enabled_combination() {
+fn provider_nav_keeps_identity_for_none_each_pair_and_all_enabled() {
     for extra_claude in [false, true] {
         let count = instances(0, extra_claude).len();
-        for mask in 0..(1_u32 << count) {
+        let mut masks = vec![0, (1_u64 << count) - 1];
+        for first in 0..count {
+            masks.push(1_u64 << first);
+            for second in first + 1..count {
+                masks.push((1_u64 << first) | (1_u64 << second));
+            }
+        }
+        for mask in masks {
             let instances = instances(mask, extra_claude);
             let (enabled, disabled) = provider_nav_order(&instances);
             let expected: Vec<_> = instances

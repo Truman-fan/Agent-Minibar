@@ -1,0 +1,42 @@
+name: Mirror source to Gitee
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gitee-source-mirror-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Push branch or tag to Gitee
+        if: ${{ env.GITEE_TOKEN != '' }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $token = [Uri]::EscapeDataString($env:GITEE_TOKEN)
+          git remote add gitee "https://Truman-fan:$token@gitee.com/Truman-fan/Agent-Minibar.git"
+          if ($env:GITHUB_REF_TYPE -eq "tag") {
+            git push gitee "refs/tags/$($env:GITHUB_REF_NAME):refs/tags/$($env:GITHUB_REF_NAME)"
+          } else {
+            git push gitee "HEAD:refs/heads/$($env:GITHUB_REF_NAME)"
+          }
+
+      - name: Explain missing mirror credential
+        if: ${{ env.GITEE_TOKEN == '' }}
+        run: echo "Set the GITEE_TOKEN repository secret to enable the Gitee mirror."

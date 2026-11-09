@@ -16,7 +16,7 @@ mod platform {
 
     use crate::popup_window::ui::win32::POPUP_TITLE;
 
-    const MUTEX_NAME: &str = "Local\\CodexMinibar.9F89F5E9-770D-41AA-879F-9B15C12A2E6A";
+    const MUTEX_NAME: &str = "Local\\AgentMinibar.9F89F5E9-770D-41AA-879F-9B15C12A2E6A";
 
     static HOLDER: OnceLock<Mutex<Option<isize>>> = OnceLock::new();
 
@@ -72,7 +72,7 @@ mod platform {
         let hwnd = crate::i18n::Language::SUPPORTED
             .into_iter()
             .find_map(|language| {
-                find_window(crate::i18n::tr_in(language, "codex-minibar-settings"))
+                find_window(crate::i18n::tr_in(language, "agent-minibar-settings"))
             })
             .or_else(|| find_window(POPUP_TITLE));
         let Some(hwnd) = hwnd else { return };

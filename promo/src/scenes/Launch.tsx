@@ -750,7 +750,7 @@ const OpenApp: React.FC<{ t: number }> = ({ t }) => {
             transform: `scale(${lerp(1.4, 1, Math.min(1, word))})`,
           }}
         >
-          Codex Minibar
+          Agent Minibar
         </div>
       )}
     </AbsoluteFill>
@@ -764,7 +764,7 @@ const ACCOUNTS: Section[] = [
   { ...sections()[3], layout: "lines" },
   {
     ...sections()[1],
-    account: "vertopolkaLF",
+    account: "Truman-fan",
     badge: { text: "V", color: "#7A5CFA" },
     layout: "rings",
   },
@@ -933,7 +933,7 @@ const beatTimeline = (): Timed[] => [
         provider: "codex",
         name: "Codex",
         plan: "Pro",
-        account: "vertopolkaLF",
+        account: "Truman-fan",
         rows: [
           { q: { id: "r5", title: "session", left: 100, reset: "4h 59m", ticks: 4 }, focused: true },
           { q: { id: "rw", title: "weekly", left: 57, reset: "5d 2h", ticks: 6 }, focused: false },
@@ -1934,7 +1934,7 @@ const BigLine: React.FC<{ text: string; at: number; t: number; accent?: boolean 
 
 /* ------------------------------------------------------------------ ending */
 
-const URL = "github.com/vertopolkaLF/codex-minibar";
+const URL = "github.com/Truman-fan/agent-minibar";
 
 /// A short end card while the music falls into its breakdown.
 const EndCard: React.FC<{ t: number }> = ({ t }) => {
@@ -1957,7 +1957,7 @@ const EndCard: React.FC<{ t: number }> = ({ t }) => {
       }}
     >
       <Img src={staticFile("app-icon.png")} style={{ width: 170, height: 170, ...up(icon) }} />
-      <div style={{ fontSize: 112, fontWeight: 800, letterSpacing: -3.5, marginTop: 24, ...up(name) }}>Codex Minibar</div>
+      <div style={{ fontSize: 112, fontWeight: 800, letterSpacing: -3.5, marginTop: 24, ...up(name) }}>Agent Minibar</div>
       <div style={{ fontSize: 38, color: "rgba(255,255,255,0.72)", marginTop: 4, ...up(tagline) }}>
         Free and open source for Windows 10 and 11
       </div>

@@ -1,8 +1,8 @@
-# Codex Minibar Stream Deck companion
+# Agent Minibar Stream Deck companion
 
 This is a thin Stream Deck plugin. It stores each key's configuration in the
 Stream Deck Property Inspector and reads sanitized quota snapshots from the
-running Codex Minibar process over loopback.
+running Agent Minibar process over loopback.
 
 All visible keys share one snapshot request every 30 seconds. The plugin keeps
 the last successful snapshot in memory for up to 60 seconds, so a brief bridge

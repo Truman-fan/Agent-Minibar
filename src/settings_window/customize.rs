@@ -2,13 +2,16 @@
 //! plus the per-instance popup card table shown on provider pages.
 
 use gpui::{
-    AnyElement, Context, FontWeight, IntoElement, ParentElement, SharedString, Styled, div, px,
+    AnyElement, AppContext, Context, FontWeight, InteractiveElement, IntoElement, ParentElement,
+    SharedString, StatefulInteractiveElement, Styled, Window, div, px,
 };
 
 use super::kit::{self, Button, Kit, Row};
-use super::window::SettingsWindow;
+use super::window::{DraggedProvider, SettingsWindow};
+use crate::popup_window::ui::theme::rgb8;
 use crate::settings::{
-    PopupPlacement, PopupTabMode, ProviderInstance, Settings, TotalSpendPresentation,
+    FloatingCircleColorMode, FloatingCircleColors, PopupPlacement, PopupTabMode, ProviderInstance,
+    Settings, TotalSpendPresentation, TrayFixedColor,
 };
 
 fn bool_row(
@@ -34,9 +37,156 @@ fn bool_row(
 }
 
 impl SettingsWindow {
+    /// Provider order shared by popup tabs, the Settings sidebar and
+    /// floating-circle target choices. Icons support both drag/drop and a
+    /// precise click-source, click-destination interaction.
+    fn provider_order_row(&mut self, k: &Kit, cx: &mut Context<Self>) -> AnyElement {
+        let theme = k.theme.clone();
+        let picked = self.provider_order_pick.as_deref();
+        let mut icons = div().flex().flex_wrap().items_center().gap(px(6.0));
+        for instance in &self.settings.instances {
+            let id = instance.id.clone();
+            let selected = picked == Some(id.as_str());
+            let rest = if selected {
+                theme.accent_soft
+            } else {
+                gpui::transparent_black()
+            };
+            let tile_id = format!("provider-order-{id}");
+            let target_id = id.clone();
+            let click_target = id.clone();
+            let drag_target = id.clone();
+            let drop_color = theme.accent_soft;
+            let dragged = DraggedProvider {
+                id,
+                enabled: instance.enabled,
+                label: instance.display_name().into(),
+                theme: theme.clone(),
+            };
+            let tile = kit::hover_bg(
+                k,
+                div().id(kit::eid(tile_id.clone())),
+                kit::hover_key(&tile_id),
+                rest,
+                theme.subtle_hover,
+            )
+            .relative()
+            .size(px(42.0))
+            .flex_none()
+            .flex()
+            .items_center()
+            .justify_center()
+            .rounded(px(8.0))
+            .border_1()
+            .border_color(if selected {
+                theme.accent
+            } else {
+                theme.divider
+            })
+            .cursor_pointer()
+            .opacity(if instance.enabled { 1.0 } else { 0.52 })
+            .on_click(cx.listener(
+                move |this, _, _, cx| match this.provider_order_pick.take() {
+                    Some(source) if source != click_target => {
+                        this.reorder_provider_any(&source, &click_target, cx)
+                    }
+                    Some(_) => cx.notify(),
+                    None => {
+                        this.provider_order_pick = Some(click_target.clone());
+                        cx.notify();
+                    }
+                },
+            ))
+            .child(kit::provider_mark(
+                k,
+                crate::provider_registry::icon(instance.driver),
+                22.0,
+                theme.brand(instance.driver),
+                None,
+            ));
+            let tile = kit::with_tooltip(
+                k,
+                tile,
+                format!(
+                    "{} · {}",
+                    instance.display_name(),
+                    crate::i18n::tr("drag-to-reorder")
+                ),
+            );
+            icons = icons.child(
+                tile.on_drag(dragged, |dragged, _, _, cx| cx.new(|_| dragged.clone()))
+                    .drag_over::<DraggedProvider>(move |style, dragged, _, _| {
+                        if dragged.id != target_id {
+                            style.bg(drop_color)
+                        } else {
+                            style
+                        }
+                    })
+                    .on_drop(cx.listener(move |this, dragged: &DraggedProvider, _, cx| {
+                        this.reorder_provider_any(&dragged.id, &drag_target, cx);
+                    })),
+            );
+        }
+        Row::new(
+            "customize-provider-order",
+            crate::i18n::tr("provider-tab-order"),
+        )
+        .description(k, crate::i18n::tr("provider-tab-order-description"))
+        .detail(div().pt(px(10.0)).child(icons).into_any_element())
+        .render(k)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn floating_color_input(
+        &mut self,
+        k: &Kit,
+        id: &'static str,
+        label: &'static str,
+        current: TrayFixedColor,
+        set: fn(&mut FloatingCircleColors, TrayFixedColor),
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let hex = format!(
+            "#{:02X}{:02X}{:02X}",
+            current.red, current.green, current.blue
+        );
+        let input = self.input(
+            format!("floating-circle-{id}"),
+            &hex,
+            "#RRGGBB",
+            false,
+            false,
+            window,
+            cx,
+            move |this, value, _, _, cx| {
+                if let Some(color) = parse_hex(&value)
+                    && color != current
+                {
+                    this.edit(cx, move |settings| {
+                        set(&mut settings.floating_circle_colors, color)
+                    });
+                }
+            },
+        );
+        let preview = div()
+            .size(px(kit::CONTROL_HEIGHT))
+            .flex_none()
+            .rounded(px(6.0))
+            .bg(rgb8((current.red, current.green, current.blue)));
+        let control = div()
+            .flex()
+            .items_center()
+            .gap(px(8.0))
+            .child(preview)
+            .child(kit::text_field(k, &input, None, window, cx));
+        kit::field(k, label, control.into_any_element())
+    }
+
     pub(super) fn customize_page(
         &mut self,
         k: &mut Kit,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Vec<AnyElement> {
         let show_edit_button = self.settings.show_edit_home_button;
@@ -48,6 +198,14 @@ impl SettingsWindow {
             )
             .on_click(Self::h(cx, |this, (), _, cx| {
                 this.edit(cx, |s| s.popup_position = None)
+            }))
+            .render(k);
+            let reset_circle = Button::new(
+                "floating-circle-reset-position",
+                crate::i18n::tr("popup-reset-position"),
+            )
+            .on_click(Self::h(cx, |this, (), _, cx| {
+                this.edit(cx, |s| s.floating_circle_position = None)
             }))
             .render(k);
             let mut rows = vec![
@@ -120,6 +278,180 @@ impl SettingsWindow {
                     .trailing(reset)
                     .render(k),
             ];
+            if cfg!(windows) {
+                rows.push(bool_row(
+                    self,
+                    k,
+                    cx,
+                    "floating-circle",
+                    crate::i18n::tr("floating-circle"),
+                    Some(crate::i18n::tr("floating-circle-description")),
+                    |s| s.floating_circle_enabled,
+                    |s, v| s.floating_circle_enabled = v,
+                ));
+                let providers = self.settings.enabled_providers();
+                let provider_labels = providers
+                    .iter()
+                    .map(|provider| SharedString::from(provider.qualified_name()))
+                    .collect::<Vec<_>>();
+                let primary_provider = self
+                    .settings
+                    .floating_circle_slots
+                    .first()
+                    .and_then(|slot| slot.provider())
+                    .or_else(|| providers.first().copied());
+                let primary_index = primary_provider
+                    .and_then(|provider| providers.iter().position(|item| *item == provider))
+                    .map_or(-1, |index| index as i32);
+                let primary_choices = providers.clone();
+                rows.push(kit::dropdown_row(
+                    k,
+                    "floating-circle-primary-target",
+                    crate::i18n::tr("floating-circle-primary-target"),
+                    Some(crate::i18n::tr("floating-circle-target-description")),
+                    provider_labels.clone(),
+                    primary_index,
+                    providers.is_empty(),
+                    Self::h(cx, move |this, index: usize, _, cx| {
+                        let Some(provider) = primary_choices.get(index).copied() else {
+                            return;
+                        };
+                        this.edit(cx, move |settings| {
+                            settings.set_floating_circle_provider(0, provider)
+                        })
+                    }),
+                ));
+                let second_enabled = self.settings.floating_circle_slots.len() > 1;
+                rows.push(kit::toggle_row(
+                    k,
+                    "floating-circle-second",
+                    crate::i18n::tr("floating-circle-second"),
+                    Some(crate::i18n::tr("floating-circle-second-description").into()),
+                    second_enabled,
+                    Self::h(cx, move |this, enabled: bool, _, cx| {
+                        this.edit(cx, move |settings| {
+                            settings.set_second_floating_circle(enabled)
+                        })
+                    }),
+                ));
+                if second_enabled {
+                    let second_provider = self.settings.floating_circle_slots[1].provider();
+                    let second_index = second_provider
+                        .and_then(|provider| providers.iter().position(|item| *item == provider))
+                        .map_or(-1, |index| index as i32);
+                    let second_choices = providers.clone();
+                    rows.push(kit::dropdown_row(
+                        k,
+                        "floating-circle-secondary-target",
+                        crate::i18n::tr("floating-circle-secondary-target"),
+                        Some(crate::i18n::tr("floating-circle-target-description")),
+                        provider_labels,
+                        second_index,
+                        providers.is_empty(),
+                        Self::h(cx, move |this, index: usize, _, cx| {
+                            let Some(provider) = second_choices.get(index).copied() else {
+                                return;
+                            };
+                            this.edit(cx, move |settings| {
+                                settings.set_floating_circle_provider(1, provider)
+                            })
+                        }),
+                    ));
+                }
+                let colors = self.settings.floating_circle_colors;
+                rows.push(kit::dropdown_row(
+                    k,
+                    "floating-circle-color-mode",
+                    crate::i18n::tr("floating-circle-color-mode"),
+                    None,
+                    vec![
+                        SharedString::from(crate::i18n::tr("floating-circle-color-gradient")),
+                        SharedString::from(crate::i18n::tr("fixed-color")),
+                    ],
+                    i32::from(colors.mode == FloatingCircleColorMode::Solid),
+                    false,
+                    Self::h(cx, |this, index: usize, _, cx| {
+                        this.edit(cx, move |settings| {
+                            settings.floating_circle_colors.mode = if index == 1 {
+                                FloatingCircleColorMode::Solid
+                            } else {
+                                FloatingCircleColorMode::Gradient
+                            };
+                        })
+                    }),
+                ));
+                let color_fields = if colors.mode == FloatingCircleColorMode::Gradient {
+                    let low = self.floating_color_input(
+                        k,
+                        "color-low",
+                        "0%",
+                        colors.low,
+                        |colors, value| colors.low = value,
+                        window,
+                        cx,
+                    );
+                    let warning = self.floating_color_input(
+                        k,
+                        "color-warning",
+                        "50%",
+                        colors.warning,
+                        |colors, value| colors.warning = value,
+                        window,
+                        cx,
+                    );
+                    let safe = self.floating_color_input(
+                        k,
+                        "color-safe",
+                        ">50%",
+                        colors.safe,
+                        |colors, value| colors.safe = value,
+                        window,
+                        cx,
+                    );
+                    let high = self.floating_color_input(
+                        k,
+                        "color-high",
+                        "100%",
+                        colors.high,
+                        |colors, value| colors.high = value,
+                        window,
+                        cx,
+                    );
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap(px(10.0))
+                        .child(div().flex().gap(px(12.0)).child(low).child(warning))
+                        .child(div().flex().gap(px(12.0)).child(safe).child(high))
+                        .into_any_element()
+                } else {
+                    self.floating_color_input(
+                        k,
+                        "color-solid",
+                        crate::i18n::tr("fixed-color"),
+                        colors.solid,
+                        |colors, value| colors.solid = value,
+                        window,
+                        cx,
+                    )
+                };
+                rows.push(
+                    div()
+                        .px(px(16.0))
+                        .py(px(12.0))
+                        .child(color_fields)
+                        .into_any_element(),
+                );
+                rows.push(
+                    Row::new(
+                        "floating-circle-position",
+                        crate::i18n::tr("floating-circle-position"),
+                    )
+                    .description(k, crate::i18n::tr("floating-circle-position-description"))
+                    .trailing(reset_circle)
+                    .render(k),
+                );
+            }
             if !cfg!(windows) {
                 rows.remove(3);
             }
@@ -182,6 +514,7 @@ impl SettingsWindow {
         let tab_mode = self.settings.popup_tab_mode;
         let tabs = kit::card_of(k, |k| {
             vec![
+                self.provider_order_row(k, cx),
                 kit::dropdown_row(
                     k,
                     "customize-tab-mode",
@@ -426,5 +759,38 @@ impl SettingsWindow {
         );
         let table = table.into_any_element();
         kit::expander(k, card_id, header, expanded, on_toggle, move |_| table)
+    }
+}
+
+fn parse_hex(value: &str) -> Option<TrayFixedColor> {
+    let hex = value.trim().trim_start_matches('#');
+    if hex.len() != 6 || !hex.chars().all(|character| character.is_ascii_hexdigit()) {
+        return None;
+    }
+    let channel = |range: std::ops::Range<usize>| u8::from_str_radix(&hex[range], 16).ok();
+    Some(TrayFixedColor {
+        red: channel(0..2)?,
+        green: channel(2..4)?,
+        blue: channel(4..6)?,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn floating_hex_colors_parse_with_or_without_hash() {
+        assert_eq!(
+            parse_hex("#5297F6"),
+            Some(TrayFixedColor {
+                red: 0x52,
+                green: 0x97,
+                blue: 0xF6,
+            })
+        );
+        assert_eq!(parse_hex("fce100").unwrap().green, 0xE1);
+        assert!(parse_hex("12345").is_none());
+        assert!(parse_hex("GGGGGG").is_none());
     }
 }

@@ -22,7 +22,7 @@ body:
     id: solution
     attributes:
       label: Proposed solution
-      description: What should Codex Minibar do instead?
+      description: What should Agent Minibar do instead?
       placeholder: Add a tray widget that can show two providers side by side.
     validations:
       required: true

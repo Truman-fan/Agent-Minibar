@@ -7,11 +7,14 @@ use gpui::{
 
 use super::kit::{self, Button, Kit, Row, eid};
 use super::window::{SettingsWindow, install_update, open_url};
+use crate::app_identity::{
+    GITEE_REPO_URL, MAINTAINER_NAME, MAINTAINER_URL, UPSTREAM_AUTHOR, UPSTREAM_REPO_URL,
+};
 use crate::updater::{ISSUES_URL, RELEASES_URL, REPO_URL, UpdatePhase, current_version};
 
 fn update_status_label(phase: &UpdatePhase) -> String {
     match phase {
-        UpdatePhase::Idle => crate::i18n::tr("check-github-for-a-new-version").into(),
+        UpdatePhase::Idle => crate::i18n::tr("check-for-updates").into(),
         UpdatePhase::Checking => crate::i18n::tr("checking-for-updates").into(),
         UpdatePhase::UpToDate => crate::i18n::tr("you-re-up-to-date").into(),
         UpdatePhase::Available(update) => {
@@ -38,7 +41,7 @@ impl SettingsWindow {
                     .text_size(px(28.0))
                     .line_height(px(34.0))
                     .font_weight(FontWeight::BOLD)
-                    .child("Codex Minibar"),
+                    .child("Agent Minibar"),
             )
             .child(
                 div()
@@ -241,6 +244,13 @@ impl SettingsWindow {
                 RELEASES_URL,
             ))
             .child(tile(
+                "about-gitee",
+                "Gitee",
+                "国内镜像",
+                "git-pull-request-fill",
+                GITEE_REPO_URL,
+            ))
+            .child(tile(
                 "about-issues",
                 crate::i18n::tr("report-an-issue"),
                 crate::i18n::tr("found-a-bug"),
@@ -248,11 +258,18 @@ impl SettingsWindow {
                 ISSUES_URL,
             ))
             .child(tile(
-                "about-author",
-                crate::i18n::tr("author"),
-                "@vertopolkaLF",
+                "about-maintainer",
+                "Maintainer",
+                MAINTAINER_NAME,
                 "at-fill",
-                "https://github.com/vertopolkaLF",
+                MAINTAINER_URL,
+            ))
+            .child(tile(
+                "about-upstream",
+                crate::i18n::tr("author"),
+                UPSTREAM_AUTHOR,
+                "github-logo-fill",
+                UPSTREAM_REPO_URL,
             ))
             .into_any_element();
 

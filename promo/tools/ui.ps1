@@ -21,7 +21,7 @@ switch ($Action) {
   "click" { [W]::SetCursorPos($X, $Y); Start-Sleep -m 60; [W]::mouse_event(2,0,0,0,[IntPtr]::Zero); [W]::mouse_event(4,0,0,0,[IntPtr]::Zero) }
   "move" { [W]::SetCursorPos($X, $Y) }
   "windows" {
-    $procId = (Get-Process codex-minibar).Id
+    $procId = (Get-Process agent-minibar).Id
     [W]::EnumWindows({ param($h, $l)
       $p = 0; [W]::GetWindowThreadProcessId($h, [ref]$p) | Out-Null
       if ($p -eq $procId -and [W]::IsWindowVisible($h)) {

@@ -1119,6 +1119,12 @@ pub struct WindowOptions {
     /// Whether the window should be minimized by the user
     pub is_minimizable: bool,
 
+    /// Whether Windows should expose its native caption button styles.
+    ///
+    /// Disable this for a fully client-drawn title bar whose minimize,
+    /// maximize and close buttons are implemented by the application.
+    pub has_native_caption_buttons: bool,
+
     /// The display to create the window on, if this is None,
     /// the window will be created on the main display
     pub display_id: Option<DisplayId>,
@@ -1175,6 +1181,9 @@ pub(crate) struct WindowParams {
     /// Whether the window should be minimized by the user
     #[cfg_attr(any(target_os = "linux", target_os = "freebsd"), allow(dead_code))]
     pub is_minimizable: bool,
+
+    #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+    pub has_native_caption_buttons: bool,
 
     #[cfg_attr(
         any(target_os = "linux", target_os = "freebsd", target_os = "windows"),
@@ -1245,6 +1254,7 @@ impl Default for WindowOptions {
             is_movable: true,
             is_resizable: true,
             is_minimizable: true,
+            has_native_caption_buttons: true,
             display_id: None,
             window_background: WindowBackgroundAppearance::default(),
             app_id: None,

@@ -7,10 +7,10 @@ use std::{
 
 use anyhow::{Context, Result};
 
-pub const APP_ID: &str = "io.github.vertopolkalf.CodexMinibar";
-const DESKTOP_FILE: &str = "io.github.vertopolkalf.CodexMinibar.desktop";
+pub const APP_ID: &str = "io.github.trumanfan.AgentMinibar";
+const DESKTOP_FILE: &str = "io.github.trumanfan.AgentMinibar.desktop";
 const DESKTOP_ENTRY: &str =
-    include_str!("../../packaging/linux/io.github.vertopolkalf.CodexMinibar.desktop");
+    include_str!("../../packaging/linux/io.github.trumanfan.AgentMinibar.desktop");
 
 pub async fn register_portal() -> Result<()> {
     static REGISTERED: OnceLock<()> = OnceLock::new();
@@ -49,7 +49,7 @@ fn ensure_entry_in(data_home: &Path, data_dirs: &[PathBuf], executable: &Path) -
     std::fs::create_dir_all(&directory).context("create desktop entry directory")?;
     let path = directory.join(DESKTOP_FILE);
     let quoted = super::autostart::quote_exec(executable);
-    let entry = DESKTOP_ENTRY.replace("Exec=codex-minibar", &format!("Exec={quoted}"));
+    let entry = DESKTOP_ENTRY.replace("Exec=agent-minibar", &format!("Exec={quoted}"));
     let mut file = match OpenOptions::new().write(true).create_new(true).open(&path) {
         Ok(file) => file,
         Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => return Ok(()),
@@ -86,7 +86,7 @@ mod tests {
         let entry =
             std::fs::read_to_string(directory.path().join("applications").join(DESKTOP_FILE))
                 .unwrap();
-        assert!(entry.contains("Name=Codex Minibar\n"));
+        assert!(entry.contains("Name=Agent Minibar\n"));
         assert!(entry.contains("Exec=\"/opt/My \\$Apps/100%%/minibar\"\n"));
         assert!(entry.contains("Exec=\"/opt/My \\$Apps/100%%/minibar\" --toggle\n"));
         ensure_entry_in(directory.path(), &[], Path::new("/different/binary")).unwrap();
@@ -108,7 +108,7 @@ mod tests {
             DESKTOP_ENTRY,
         )
         .unwrap();
-        ensure_entry_in(&home, &[system], Path::new("/usr/bin/codex-minibar")).unwrap();
+        ensure_entry_in(&home, &[system], Path::new("/usr/bin/agent-minibar")).unwrap();
         assert!(!home.exists());
     }
 }

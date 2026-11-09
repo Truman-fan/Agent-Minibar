@@ -412,8 +412,7 @@ impl PopupRoot {
                 } else if std::mem::take(&mut this.host.was_active)
                     && this.host.phase == Phase::Open
                     && !this.ui.popup_floating
-                    && !crate::popup::is_pinned()
-                    && !crate::settings_window::is_open()
+                    && crate::popup::outside_dismiss_enabled()
                 {
                     crate::popup::dismiss_on_focus_loss();
                 }
@@ -1907,6 +1906,10 @@ impl PopupRoot {
 
     pub(super) fn open_settings(&mut self) {
         crate::settings_window::open();
+        // The floating circle opens a pinned popup, so ordinary focus-loss
+        // dismissal does not run when Settings (in this process) activates.
+        // Use the normal Hide command so the capsule still slides away.
+        crate::popup::hide();
     }
 
     pub(super) fn install_update(&mut self) {

@@ -12,7 +12,6 @@ use std::{
 
 use anyhow::{Context, Result, anyhow};
 use chrono::{DateTime, Duration, Local, NaiveDate, SecondsFormat, TimeZone, Timelike, Utc};
-use directories::ProjectDirs;
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -2171,9 +2170,9 @@ fn config_dir() -> Result<PathBuf> {
         let settings = crate::fake::settings_path();
         return Ok(settings.parent().unwrap_or(&settings).to_path_buf());
     }
-    ProjectDirs::from("dev", "Codex Minibar", "Codex Minibar")
-        .map(|dirs| dirs.config_dir().to_path_buf())
-        .context("could not resolve the application config directory")
+    Ok(crate::app_identity::project_dirs()?
+        .config_dir()
+        .to_path_buf())
 }
 
 fn store_path() -> Result<PathBuf> {

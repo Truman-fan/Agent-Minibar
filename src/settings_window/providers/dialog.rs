@@ -63,6 +63,13 @@ pub(crate) enum ProviderDialogKind {
     RemoveOpenCodeKey {
         provider: ProviderId,
     },
+    DeepSeekKey {
+        provider: ProviderId,
+        replace: bool,
+    },
+    RemoveDeepSeekKey {
+        provider: ProviderId,
+    },
 }
 
 /// The steps of the "Add provider" dialog.
@@ -838,6 +845,47 @@ impl SettingsWindow {
                     crate::i18n::tr("remove"),
                 )
             }
+            ProviderDialogKind::DeepSeekKey { provider, replace } => {
+                fields.push(kit::caption(
+                    k,
+                    crate::i18n::format("for", &[("v0", (instance_name(provider)).to_string())]),
+                ));
+                fields.push(self.dialog_input(
+                    k,
+                    FIELD_KEY,
+                    crate::i18n::tr("api-key"),
+                    "sk-…",
+                    "",
+                    true,
+                    Some(crate::i18n::tr(if cfg!(windows) {
+                        "saved-in-windows-user-storage-never-in-the-settings-file"
+                    } else {
+                        "linux-saved-in-windows-user-storage-never-in-the-settings-file"
+                    })),
+                    window,
+                    cx,
+                ));
+                first_input = Some(FIELD_KEY);
+                (
+                    if *replace {
+                        crate::i18n::tr("replace-api-key")
+                    } else {
+                        crate::i18n::tr("add-api-key")
+                    }
+                    .to_owned(),
+                    crate::i18n::tr("save-key"),
+                )
+            }
+            ProviderDialogKind::RemoveDeepSeekKey { provider } => {
+                fields.push(kit::caption(
+                    k,
+                    crate::i18n::format("for", &[("v0", (instance_name(provider)).to_string())]),
+                ));
+                (
+                    crate::i18n::tr("remove-api-key").to_owned(),
+                    crate::i18n::tr("remove"),
+                )
+            }
         };
         if let Some(error) = &dialog.error
             && !matches!(dialog.kind, ProviderDialogKind::ManualCredential { .. })
@@ -861,6 +909,7 @@ impl SettingsWindow {
                 | ProviderDialogKind::RemoveOpenRouterApiKey { .. }
                 | ProviderDialogKind::RemoveOpenRouterManagementKey { .. }
                 | ProviderDialogKind::RemoveOpenCodeKey { .. }
+                | ProviderDialogKind::RemoveDeepSeekKey { .. }
         );
         let primary_label = if dialog.checking {
             if dialog.is_sign_in() {
@@ -1370,6 +1419,56 @@ impl SettingsWindow {
                     cx,
                     move || {
                         persist_opencode_manual_key(settings_tx, provider, None).map_err(|error| {
+                            anyhow::anyhow!(crate::i18n::format(
+                                "could-not-remove-the-key-error",
+                                &[("error", format!("{:#}", error))],
+                            ))
+                        })
+                    },
+                    |this, (), cx| {
+                        this.reload_settings();
+                        this.finish_dialog(
+                            DialogOutcome {
+                                notice: crate::i18n::tr("api-key-removed").into(),
+                            },
+                            cx,
+                        );
+                    },
+                );
+            }
+            ProviderDialogKind::DeepSeekKey { provider, .. } => {
+                if key.is_empty() {
+                    return self.fail_dialog(crate::i18n::tr("paste-a-key-first"), cx);
+                }
+                self.run_dialog_then(
+                    cx,
+                    move || {
+                        crate::deepseek::verify_api_key(provider, &key)?;
+                        persist_deepseek_manual_key(settings_tx, provider, Some(key)).map_err(
+                            |error| {
+                                anyhow::anyhow!(crate::i18n::format(
+                                    "could-not-save-the-key-error",
+                                    &[("error", format!("{:#}", error))],
+                                ))
+                            },
+                        )
+                    },
+                    |this, (), cx| {
+                        this.reload_settings();
+                        this.finish_dialog(
+                            DialogOutcome {
+                                notice: crate::i18n::tr("api-key-saved").into(),
+                            },
+                            cx,
+                        );
+                    },
+                );
+            }
+            ProviderDialogKind::RemoveDeepSeekKey { provider } => {
+                self.run_dialog_then(
+                    cx,
+                    move || {
+                        persist_deepseek_manual_key(settings_tx, provider, None).map_err(|error| {
                             anyhow::anyhow!(crate::i18n::format(
                                 "could-not-remove-the-key-error",
                                 &[("error", format!("{:#}", error))],

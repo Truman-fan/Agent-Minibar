@@ -47,7 +47,7 @@ Quota request: `GET https://chatgpt.com/backend-api/wham/usage`, Bearer token и
 
 Основания: [игнорирование save/refresh ошибок](https://github.com/nesszer/Win-CodexBar/blob/3c30537e05d69cbcada416083af7d361baf28f83/rust/src/codex_accounts/api.rs#L124-L167), [process-local locks](https://github.com/nesszer/Win-CodexBar/blob/3c30537e05d69cbcada416083af7d361baf28f83/rust/src/codex_accounts/fetch_coordination.rs#L13-L39), [login env](https://github.com/nesszer/Win-CodexBar/blob/3c30537e05d69cbcada416083af7d361baf28f83/rust/src/codex_accounts/login_runner.rs#L106-L120), [backup writer](https://github.com/nesszer/Win-CodexBar/blob/3c30537e05d69cbcada416083af7d361baf28f83/rust/src/codex_accounts/account_manager.rs#L325-L335).
 
-## Что применимо к Codex Minibar
+## Что применимо к Agent Minibar
 
 Локальный Codex клиент пока читает только access token/account ID из фиксированного `.codex/auth.json`: [src/codex.rs](../src/codex.rs#L298). [src/store/codex_accounts.rs](../src/store/codex_accounts.rs#L74) хранит атрибуцию истории usage, а не OAuth-профили. Эти две сущности следует сохранить раздельными.
 

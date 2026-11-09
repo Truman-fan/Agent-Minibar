@@ -1,4 +1,4 @@
-### Codex Minibar application messages.
+### Agent Minibar application messages.
 ### English source; per-message fallback. Keep $parameters unchanged.
 
 # src/provider_registry.rs
@@ -691,10 +691,10 @@ data = Data
 rendering = Rendering
 
 # src/settings_window/advanced.rs
-software-rendering = Software rendering
+software-rendering = Compatibility rendering (recommended)
 
 # src/settings_window/advanced.rs
-software-rendering-description = Draw windows on the CPU instead of the graphics card. Can help when a game keeps the GPU busy; animations may be less smooth.
+software-rendering-description = Use Windows WARP instead of the graphics card. Avoids blank windows and prompts caused by graphics overlays such as NVIDIA's; animations may be slightly less smooth.
 
 # src/settings_window/advanced.rs
 settings-exported = Settings exported.
@@ -982,7 +982,7 @@ msg-60-minutes = 60 minutes
 start-with-windows = Start with Windows
 
 # src/settings_window/general.rs
-open-codex-minibar-in-the-tray-when-you-sign-in = Open Codex Minibar in the tray when you sign in.
+open-agent-minibar-in-the-tray-when-you-sign-in = Open Agent Minibar in the tray when you sign in.
 
 # src/settings_window/onboarding.rs
 refresh-interval = Refresh interval
@@ -1983,7 +1983,7 @@ app-icon = App icon
 widget = Widget { $v0 }
 
 # src/settings_window/tray.rs
-the-codex-minibar-icon = The Codex Minibar icon
+the-agent-minibar-icon = The Agent Minibar icon
 
 # src/settings_window/tray.rs
 style-no-indicators = { $style } · No indicators
@@ -2019,7 +2019,7 @@ edit = Edit
 duplicate = Duplicate
 
 # src/settings_window/tray.rs
-shows-the-codex-minibar-icon-in-the-notification-area-it-has-no-i = Shows the Codex Minibar icon in the notification area. It has no indicators to set up.
+shows-the-agent-minibar-icon-in-the-notification-area-it-has-no-i = Shows the Agent Minibar icon in the notification area. It has no indicators to set up.
 
 # src/settings_window/tray.rs
 style = Style
@@ -2115,10 +2115,10 @@ english = English
 msg-russian = Русский
 
 # application
-codex-minibar-settings = Codex Minibar Settings
+agent-minibar-settings = Agent Minibar Settings
 
 # application
-welcome-to-codex-minibar = Welcome to Codex Minibar
+welcome-to-agent-minibar = Welcome to Agent Minibar
 
 # application
 exit = Exit
@@ -2651,7 +2651,7 @@ update-installing = Installing update
 update-unpacking = Unpacking files…
 
 # src/updater.rs
-update-restarting = Restarting Codex Minibar
+update-restarting = Restarting Agent Minibar
 
 # src/updater.rs
 update-restarting-body = The app will reopen in a moment.
@@ -2751,7 +2751,7 @@ taskbar-style-glance = Glance
 taskbar-style-glance-hint = The provider icon beside two lines of text, like the weather button.
 taskbar-style-rings-hint = A progress ring per quota with its value beside it.
 taskbar-style-bars-hint = Thin progress bars stacked beside the provider icon.
-taskbar-menu-open = Open Codex Minibar
+taskbar-menu-open = Open Agent Minibar
 taskbar-menu-settings = Taskbar widget settings
 taskbar-menu-hide = Hide taskbar widgets
 taskbar-card-left = { $value } left
@@ -3008,7 +3008,7 @@ banked-reset-applied = Banked reset applied
 linux-no-tray-title = No system tray found
 
 # src/tray.rs
-linux-no-tray-body = Enable the AppIndicator extension to see Codex Minibar in the panel. Launch Codex Minibar again to open it.
+linux-no-tray-body = Enable the AppIndicator extension to see Agent Minibar in the panel. Launch Agent Minibar again to open it.
 
 # src/settings_window/general.rs
 start-at-login = Start at login
@@ -3068,3 +3068,37 @@ linux-runs-claude-code-s-own-login-for-name-with-its-config-folder-as-c = Runs C
 
 # src/settings_window/advanced.rs
 linux-add-a-game-description = Games launched by Steam and games in Steam or Heroic libraries are detected on their own. Add any other program here.
+floating-circle = Floating circle
+floating-circle-description = Keep quota rings above other apps even when the taskbar is hidden. Drag to move it; click to open the popup.
+floating-circle-color-mode = Quota color
+floating-circle-color-gradient = Changes with quota
+floating-circle-label-5h = 5h
+floating-circle-label-1w = 1w
+floating-circle-position = Floating circle position
+floating-circle-position-description = Reset the circle to the top-right of the current display.
+qwen-code-cli-folder = Qwen Code CLI folder
+folder-with-qwen-exe-qwen-cmd-or-qwen-ps1 = Folder with qwen.exe, qwen.cmd, or qwen.ps1. Leave empty to find it automatically.
+reads-qwen-code-settings-and-local-token-history = Reads Qwen Code settings and local token history without using its credentials.
+qwen-local-data = Qwen local data
+qwen-code-cli = Qwen Code CLI
+found-qwen-code-settings-or-local-history = Found Qwen Code settings or local history.
+qwen-code-settings-and-local-history-not-found = Qwen Code settings and local history were not found.
+reads-deepseek-harness-root-agent-history = Reads root and delegated Agent token usage from local DeepSeek Harness sessions. Seeded sessions are excluded.
+reads-kimi-model-local-agent-history = Reads Kimi model usage from supported local agent histories. Kimi Code sub-agents are excluded.
+reads-domestic-model-local-agent-history = Reads this model family's token usage from supported local agent histories without accessing credentials.
+floating-circle-switch-target = Switch target
+floating-circle-add-second = Add second
+floating-circle-close-this = Close circle
+provider-tab-order = Provider order
+provider-tab-order-description = Click one icon, then its destination, or drag icons to reorder provider pages.
+floating-circle-primary-target = First circle target
+floating-circle-secondary-target = Second circle target
+floating-circle-target-description = Choose the provider account whose remaining quota this circle shows.
+floating-circle-second = Second floating circle
+floating-circle-second-description = Show one optional circle below the first. Both circles move together.
+floating-circle-card-balance = Balance
+floating-circle-card-quota = Quota
+floating-circle-not-authorized = Sign in
+floating-circle-temporarily-unavailable = Try later
+floating-circle-loading-quota = Loading
+floating-circle-no-quota-api = No quota API

@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "AgentMinibar.CommandPalette (Package)": {
+      "commandName": "MsixPackage",
+      "doNotLaunchApp": true
+    },
+    "AgentMinibar.CommandPalette (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

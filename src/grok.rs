@@ -76,7 +76,7 @@ impl LimitProvider for GrokClient {
             )
             .set("x-xai-token-auth", "xai-grok-cli")
             .set("Accept", "application/json")
-            .set("User-Agent", "Codex Minibar")
+            .set("User-Agent", "Agent Minibar")
             .call()
         {
             Ok(response) => response,

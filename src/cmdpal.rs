@@ -24,14 +24,15 @@ use crate::{
     taskbar::model::{self, Appearance, Row, WidgetView},
 };
 
-/// Identity name in `cmdpal/CodexMinibar.CommandPalette/Package.appxmanifest`.
-pub const PACKAGE_NAME: &str = "CodexMinibar.CommandPalette";
+/// Identity name in `cmdpal/AgentMinibar.CommandPalette/Package.appxmanifest`.
+pub const PACKAGE_NAME: &str = "AgentMinibar.CommandPalette";
 /// `PACKAGE_NAME` plus the publisher hash of the unsigned identity.
-pub const PACKAGE_FAMILY: &str = "CodexMinibar.CommandPalette_3pr41ftjnk01m";
+pub const PACKAGE_FAMILY: &str = "AgentMinibar.CommandPalette_3pr41ftjnk01m";
 const PACKAGE_DOWNLOAD_BASE: &str =
-    "https://raw.githubusercontent.com/vertopolkaLF/codex-minibar/main/data";
+    "https://raw.githubusercontent.com/Truman-fan/Agent-Minibar/main/data";
 /// Installs this package instead of the published one (development).
-const PACKAGE_OVERRIDE_ENV: &str = "CODEX_MINIBAR_CMDPAL_MSIX";
+const PACKAGE_OVERRIDE_ENV: &str = "AGENT_MINIBAR_CMDPAL_MSIX";
+const LEGACY_PACKAGE_OVERRIDE_ENV: &str = "CODEX_MINIBAR_CMDPAL_MSIX";
 const ICON_PIXELS: u32 = 64;
 const SEPARATOR: &str = " \u{00b7} ";
 
@@ -500,7 +501,10 @@ fn package_url() -> String {
 }
 
 fn download_package() -> anyhow::Result<PathBuf> {
-    if let Some(path) = std::env::var_os(PACKAGE_OVERRIDE_ENV).map(PathBuf::from) {
+    if let Some(path) = std::env::var_os(PACKAGE_OVERRIDE_ENV)
+        .or_else(|| std::env::var_os(LEGACY_PACKAGE_OVERRIDE_ENV))
+        .map(PathBuf::from)
+    {
         anyhow::ensure!(path.is_file(), "{} does not exist", path.display());
         return Ok(path);
     }
@@ -508,7 +512,7 @@ fn download_package() -> anyhow::Result<PathBuf> {
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis();
-    let directory = std::env::temp_dir().join("Codex Minibar");
+    let directory = std::env::temp_dir().join("Agent Minibar");
     fs::create_dir_all(&directory)?;
     let path = directory.join(format!("{PACKAGE_NAME}-{stamp}.msix"));
     crate::updater::download_file(&package_url(), &path)?;
@@ -653,6 +657,8 @@ mod tests {
             show_values: values,
             show_pace: false,
             card: Vec::new(),
+            floating_card: None,
+            floating_warning: None,
         }
     }
 

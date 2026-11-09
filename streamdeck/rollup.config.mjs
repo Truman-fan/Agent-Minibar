@@ -5,7 +5,7 @@ import typescript from "@rollup/plugin-typescript";
 export default {
   input: "src/plugin.ts",
   output: {
-    file: "com.vertopolkalf.codex-minibar.sdPlugin/bin/plugin.js",
+    file: "com.trumanshow.agent-minibar.sdPlugin/bin/plugin.js",
     format: "es",
     sourcemap: false,
   },

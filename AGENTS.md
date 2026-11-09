@@ -2,7 +2,7 @@ Always check docs and examples before doing UI work. LLM doesn't have great know
 
 Always run `cargo check` after changes related to the app to ensure the code is correct. No need to run it after changes related to the website.
 
-Always run `cargo fmt` after changing Rust code, including tests, and before every commit. CI rejects unformatted code (`cargo fmt --package codex-minibar --check`).
+Always run `cargo fmt` after changing Rust code, including tests, and before every commit. CI rejects unformatted code (`cargo fmt --package agent-minibar --check`).
 
 Never launch the app itself.
 
@@ -23,7 +23,7 @@ in the current worktree, forwards arguments and exit codes, and restores the
 caller's environment. It honors an explicit `CARGO_TARGET_DIR` override. In older
 worktrees without the script, invoke the main checkout's script by absolute path
 while keeping the current directory inside the worktree being checked (on this
-machine: `& C:\Dev\codex-minibar\cargo-worktree.ps1 check --locked`).
+machine: `& C:\Dev\agent-minibar\cargo-worktree.ps1 check --locked`).
 
 Quote the `'--'` argument separator when forwarding flags to rustc, Clippy or
 rustfmt; PowerShell otherwise consumes an unquoted separator before the script

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Builds the Linux release packages into dist/<version>/:
-#   codex-minibar-<version>-linux-<arch>.tar.gz  (binary, desktop entry, icons)
-#   codex-minibar_<version>_<debarch>.deb        (Debian/Ubuntu package)
-#   codex-minibar-<version>-linux-<arch>.AppImage (portable, x64 only)
+#   agent-minibar-<version>-linux-<arch>.tar.gz  (binary, desktop entry, icons)
+#   agent-minibar_<version>_<debarch>.deb        (Debian/Ubuntu package)
+#   agent-minibar-<version>-linux-<arch>.AppImage (portable, x64 only)
 #
 # Usage: ./build-linux.sh [--skip-build]
 # Requires: cargo; dpkg-deb for the .deb; patchelf and curl for the AppImage.
@@ -26,7 +26,7 @@ if [ "${1:-}" != "--skip-build" ]; then
     cargo build --release --locked
 fi
 
-binary="target/release/codex-minibar"
+binary="target/release/agent-minibar"
 dist="dist/$version"
 stage="$(mktemp -d)"
 trap 'rm -rf "$stage"' EXIT
@@ -42,24 +42,27 @@ skip_package() {
 # Filesystem layout shared by every package, rooted at a prefix.
 install_tree() {
     local prefix="$1"
-    install -Dm755 "$binary" "$prefix/bin/codex-minibar"
-    install -Dm644 packaging/linux/io.github.vertopolkalf.CodexMinibar.desktop \
-        "$prefix/share/applications/io.github.vertopolkalf.CodexMinibar.desktop"
+    install -Dm755 "$binary" "$prefix/bin/agent-minibar"
+    install -Dm644 packaging/linux/io.github.trumanfan.AgentMinibar.desktop \
+        "$prefix/share/applications/io.github.trumanfan.AgentMinibar.desktop"
     for size in 16 24 32 48 64 128 256 512; do
         install -Dm644 "assets/icons/app-icon-$size.png" \
-            "$prefix/share/icons/hicolor/${size}x${size}/apps/codex-minibar.png"
+            "$prefix/share/icons/hicolor/${size}x${size}/apps/agent-minibar.png"
     done
-    install -Dm644 LICENSE "$prefix/share/doc/codex-minibar/LICENSE"
+    install -Dm644 LICENSE "$prefix/share/doc/agent-minibar/LICENSE"
+    install -Dm644 NOTICE "$prefix/share/doc/agent-minibar/NOTICE"
+    install -Dm644 MODIFICATIONS.md \
+        "$prefix/share/doc/agent-minibar/MODIFICATIONS.md"
     install -Dm644 THIRD_PARTY_NOTICES.md \
-        "$prefix/share/doc/codex-minibar/THIRD_PARTY_NOTICES.md"
+        "$prefix/share/doc/agent-minibar/THIRD_PARTY_NOTICES.md"
 }
 
 # Portable tarball: extract anywhere, or into ~/.local for a per-user install.
-tar_root="$stage/codex-minibar-$version"
+tar_root="$stage/agent-minibar-$version"
 install_tree "$tar_root"
 cat > "$tar_root/install.sh" <<'INSTALL'
 #!/usr/bin/env sh
-# Installs Codex Minibar for the current user into ~/.local.
+# Installs Agent Minibar for the current user into ~/.local.
 set -eu
 here="$(cd "$(dirname "$0")" && pwd)"
 prefix="${PREFIX:-$HOME/.local}"
@@ -70,8 +73,8 @@ command -v update-desktop-database >/dev/null 2>&1 &&
 echo "Installed to $prefix. Make sure $prefix/bin is on your PATH."
 INSTALL
 chmod 755 "$tar_root/install.sh"
-tarball="$dist/codex-minibar-$version-linux-$arch.tar.gz"
-tar -C "$stage" -czf "$tarball" "codex-minibar-$version"
+tarball="$dist/agent-minibar-$version-linux-$arch.tar.gz"
+tar -C "$stage" -czf "$tarball" "agent-minibar-$version"
 echo "Built $tarball"
 
 build_deb() {
@@ -82,21 +85,21 @@ build_deb() {
     # GPUI loads xkbcommon, Wayland, X11 and Vulkan at runtime, so they are not
     # visible to ldd and must be listed explicitly.
     cat > "$deb_root/DEBIAN/control" <<CONTROL
-Package: codex-minibar
+Package: agent-minibar
 Version: $version
 Section: utils
 Priority: optional
 Architecture: $debarch
-Maintainer: vertopolkaLF <noreply@github.com>
+Maintainer: Truman_show <noreply@github.com>
 Installed-Size: $installed_size
 Depends: libc6, libssl3t64 | libssl3, zlib1g, libzstd1, libbz2-1.0, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0, libx11-xcb1, libxcb1, libvulkan1, mesa-vulkan-drivers | vulkan-icd, libfontconfig1, libfreetype6
 Recommends: xdg-desktop-portal, gnome-shell-extension-appindicator | plasma-workspace
-Homepage: https://github.com/vertopolkaLF/codex-minibar
+Homepage: https://github.com/Truman-fan/Agent-Minibar
 Description: Tray companion for monitoring AI tools usage
- Codex Minibar shows usage limits, resets and spend of AI coding tools
+ Agent Minibar shows usage limits, resets and spend of AI coding tools
  (Codex, Claude Code, Cursor, OpenRouter and more) in the system tray.
 CONTROL
-    deb="$dist/codex-minibar_${version}_${debarch}.deb"
+    deb="$dist/agent-minibar_${version}_${debarch}.deb"
     dpkg-deb --root-owner-group --build "$deb_root" "$deb" >/dev/null
     echo "Built $deb"
 }
@@ -123,10 +126,10 @@ fetch_tool() {
 appimage_host_libraries='^(ld-linux-x86-64|libc|libm|libdl|libpthread|librt|libresolv|libgcc_s|libstdc\+\+|libz|libxcb|libXau|libXdmcp|libbsd|libmd)\.so'
 
 build_appimage() {
-    local appdir="$stage/CodexMinibar.AppDir"
+    local appdir="$stage/AgentMinibar.AppDir"
     local tools="target/appimage-tools"
-    local app_id="io.github.vertopolkalf.CodexMinibar"
-    local output="$dist/codex-minibar-$version-linux-$arch.AppImage"
+    local app_id="io.github.trumanfan.AgentMinibar"
+    local output="$dist/agent-minibar-$version-linux-$arch.AppImage"
     mkdir -p "$tools"
     fetch_tool "$appimagetool_url" "$appimagetool_sha256" "$tools/appimagetool"
     fetch_tool "$appimage_runtime_url" "$appimage_runtime_sha256" "$tools/runtime"
@@ -149,12 +152,12 @@ build_appimage() {
     done < <(ldd "$binary" | awk '$2 == "=>" { print $1, $3 }')
     # An rpath instead of LD_LIBRARY_PATH: the app starts provider CLIs, and
     # those must not inherit these libraries.
-    patchelf --set-rpath '$ORIGIN/../lib' "$appdir/usr/bin/codex-minibar"
+    patchelf --set-rpath '$ORIGIN/../lib' "$appdir/usr/bin/agent-minibar"
 
-    ln -s usr/bin/codex-minibar "$appdir/AppRun"
+    ln -s usr/bin/agent-minibar "$appdir/AppRun"
     cp "$appdir/usr/share/applications/$app_id.desktop" "$appdir/$app_id.desktop"
-    cp assets/icons/app-icon-256.png "$appdir/codex-minibar.png"
-    ln -s codex-minibar.png "$appdir/.DirIcon"
+    cp assets/icons/app-icon-256.png "$appdir/agent-minibar.png"
+    ln -s agent-minibar.png "$appdir/.DirIcon"
 
     # Extract-and-run: build machines need no FUSE.
     ARCH=x86_64 "$tools/appimagetool" --appimage-extract-and-run --no-appstream \

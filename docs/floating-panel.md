@@ -3,7 +3,7 @@
 Enable **Settings > Customize > Floating panel** to detach the popup from the
 taskbar. Enabling it also pins the panel open. Drag the dedicated header to move
 it, including across monitors. Tabs and action buttons remain interactive.
-Both modes show a compact bar with the app logo, Codex Minibar title and action
+Both modes show a compact bar with the app logo, Agent Minibar title and action
 buttons on the same side as the tabs. It sits below the tabs for bottom-anchored
 popups and above them for top-anchored popups. Only the floating mode permits
 dragging its title area; the regular popup remains anchored to the taskbar.
@@ -53,6 +53,59 @@ the saved floating position remains available when it is enabled again.
 The tray/worker bridge uses its idle polling cadence while a pinned panel is
 open and Settings is closed. GPUI drives animations itself and worker updates
 continue to publish normally.
+
+## Floating circle (Windows)
+
+Enable **Settings > Customize > Floating circle** for a compact 96 by 122 DIP
+quota panel that does not depend on Explorer's taskbar. It remains topmost when
+the taskbar is auto-hidden or unavailable. The first visible configured taskbar
+widget supplies its provider and indicators; when no taskbar widget is
+configured, the first enabled provider supplies the defaults. Two thick status
+rings sit above a flat two-column information card. Ring and percentage colors
+follow the remaining quota, while the first and second labels keep blue and
+green identity fills. A neutral circle separates two available quota rings
+without representing progress. Providers without percentage quotas show one
+thin neutral placeholder circle instead; its outer edge matches the ordinary
+outer quota ring and its slightly larger provider mark keeps the empty state
+balanced. The placeholder never appears alongside a quota ring. Its lower card
+keeps the same filled-title format as percentage quotas and shows a real
+balance, unlimited status, authorization problem, temporary failure, loading
+state, or the absence of a quota API. Consumption totals never become quota
+rings, and an unavailable read is never presented as 0%. Cached quota values
+remain visible but dim and receive a warning marker after a failed refresh.
+The panel keeps at most two indicators and follows the taskbar's light/dark
+appearance.
+
+One floating circle is shown by default. An optional second circle can be
+enabled from Customize or from the first circle's detail card. The circles are
+always a fixed vertical pair with a 10 DIP gap, move as one group, and are
+clamped as a group so they cannot overlap or split across an edge. More than
+two circles are never rendered. Each slot independently binds to one enabled
+provider account. Agents, child Agents and CLI sessions can contribute to
+separate usage statistics, but are never floating-circle targets and never
+create circles automatically.
+
+Drag the circle to move it across monitors. Releasing a drag saves its physical
+screen origin immediately. **Reset position** places it at the upper-right of
+the display containing the pointer. A click toggles the ordinary popup and uses
+the taskbar click preference to select Home or the provider tab, including while
+Settings is open. The popup footer's red **Exit** button shuts the application
+down through the normal worker and persistence cleanup path. Right-clicking
+opens Settings. The lower quota card uses a dark translucent surface, compact
+blue and green label capsules, a centered divider, and a paired keyline so its
+semi-transparent values remain legible over both white documents and dark
+editors. Wide Settings windows reserve an animated strip on
+the screen-right side while the circle is enabled, keeping page controls clear
+of the default floating position after maximize. The native window unions a
+circular ring region with the lower rounded card, so transparent space outside
+those two shapes neither blocks nor receives clicks.
+
+When the popup was opened by a floating circle, its footer adds **Switch
+target**. This opens Customize directly at the visible target selectors. The
+first circle also offers **Add second** while no second slot exists; the second
+circle offers **Close circle**. These actions dismiss the detail card before
+changing the circle layout. Ordinary tray/taskbar popups do not show these
+slot-specific actions.
 
 ## Height resizing
 

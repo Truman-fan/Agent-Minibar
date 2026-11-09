@@ -205,7 +205,7 @@ fn launch_terminal(selected: Option<&AvailableAiTool>) -> Result<()> {
 #[cfg(not(windows))]
 fn linux_script() -> Result<PathBuf> {
     let base = directories::BaseDirs::new().context("resolve the cache directory")?;
-    let directory = base.cache_dir().join("codex-minibar");
+    let directory = base.cache_dir().join("agent-minibar");
     fs::create_dir_all(&directory).with_context(|| format!("create {}", directory.display()))?;
     let path = directory.join("troubleshoot.sh");
     fs::write(&path, include_str!("../assets/troubleshoot.sh"))

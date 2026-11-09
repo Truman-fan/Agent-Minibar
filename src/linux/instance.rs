@@ -6,7 +6,7 @@
 //! to show itself, and exits — the Linux counterpart of the named mutex and
 //! `FindWindow` activation on Windows.
 //!
-//! `codex-minibar --toggle` asks it to toggle the popup instead. Bound to a
+//! `agent-minibar --toggle` asks it to toggle the popup instead. Bound to a
 //! keyboard shortcut in the desktop's settings (`linux::keybinding` installs
 //! it), that is the global hotkey on Wayland, where applications cannot grab
 //! keys themselves. The desktop hands the launched command an
@@ -46,15 +46,15 @@ fn runtime_dir() -> PathBuf {
     }
     // SAFETY: getuid has no preconditions and cannot fail.
     let uid = unsafe { libc::getuid() };
-    std::env::temp_dir().join(format!("codex-minibar-{uid}"))
+    std::env::temp_dir().join(format!("agent-minibar-{uid}"))
 }
 
 fn paths() -> (PathBuf, PathBuf) {
     let suffix = if crate::fake::enabled() { "-fake" } else { "" };
     let dir = runtime_dir();
     (
-        dir.join(format!("codex-minibar{suffix}.lock")),
-        dir.join(format!("codex-minibar{suffix}.sock")),
+        dir.join(format!("agent-minibar{suffix}.lock")),
+        dir.join(format!("agent-minibar{suffix}.sock")),
     )
 }
 
@@ -132,7 +132,7 @@ fn activate_existing(socket_path: &std::path::Path) {
             };
             let _ = stream.write_all(&request);
         }
-        Err(error) => eprintln!("could not reach the running Codex Minibar: {error}"),
+        Err(error) => eprintln!("could not reach the running Agent Minibar: {error}"),
     }
 }
 
@@ -203,7 +203,7 @@ pub fn toggle_command() -> String {
         .map(std::path::PathBuf::from)
         .or_else(|| std::env::current_exe().ok())
         .map(|path| path.display().to_string())
-        .unwrap_or_else(|| "codex-minibar".into());
+        .unwrap_or_else(|| "agent-minibar".into());
     let program = if program.contains(|c: char| c.is_whitespace() || c == '\'') {
         format!("'{}'", program.replace('\'', "'\\''"))
     } else {

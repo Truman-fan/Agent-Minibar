@@ -48,6 +48,9 @@ static IGNORE_OUTSIDE_UNTIL_MS: AtomicI64 = AtomicI64::new(0);
 static REVEAL_PINNED: AtomicBool = AtomicBool::new(false);
 static USER_PINNED: AtomicBool = AtomicBool::new(false);
 static DRAGGING: AtomicBool = AtomicBool::new(false);
+/// The floating circle opens a compact, transient detail card. It must dismiss
+/// on outside clicks even when Settings is open or the regular popup is pinned.
+static FORCE_OUTSIDE_DISMISS: AtomicBool = AtomicBool::new(false);
 static BOTTOM_BAR_SIZE: AtomicU8 = AtomicU8::new(BottomBarSize::Comfortable.index() as u8);
 static CORNER_RADIUS_DIP: AtomicI32 = AtomicI32::new(WINDOW_CORNER_RADIUS_DIP);
 static POPUP_BACKGROUND_MATERIAL: AtomicU8 =
@@ -106,6 +109,19 @@ pub(crate) fn is_user_pinned() -> bool {
 /// Outside clicks and Escape leave the popup open.
 pub(crate) fn is_pinned() -> bool {
     is_reveal_pinned() || is_user_pinned() || DRAGGING.load(Ordering::SeqCst)
+}
+
+/// Whether an outside pointer press should dismiss the current popup.
+pub(crate) fn outside_dismiss_enabled() -> bool {
+    outside_dismiss_policy(
+        FORCE_OUTSIDE_DISMISS.load(Ordering::SeqCst),
+        is_pinned(),
+        crate::settings_window::is_open(),
+    )
+}
+
+fn outside_dismiss_policy(force: bool, pinned: bool, settings_open: bool) -> bool {
+    force || (!pinned && !settings_open)
 }
 
 #[cfg(windows)]
@@ -172,18 +188,24 @@ pub fn apply_popup_appearance(
 
 /// Show the popup near a tray click (physical screen pixels).
 pub fn show_near(anchor_x: i32, anchor_y: i32) {
-    show(anchor_x, anchor_y, false);
+    show(anchor_x, anchor_y, false, false);
 }
 
 /// Show the popup at the end of the taskbar nearest a taskbar widget, so a
 /// widget at the start of the taskbar opens it on that side.
 pub fn show_beside(anchor_x: i32, anchor_y: i32) {
-    show(anchor_x, anchor_y, true);
+    show(anchor_x, anchor_y, true, false);
 }
 
-fn show(anchor_x: i32, anchor_y: i32, beside: bool) {
+/// Show the transient detail card opened by the floating circle.
+pub fn show_beside_dismissible(anchor_x: i32, anchor_y: i32) {
+    show(anchor_x, anchor_y, true, true);
+}
+
+fn show(anchor_x: i32, anchor_y: i32, beside: bool, force_outside_dismiss: bool) {
     // Optimistic: the tray bridge reads this flag before the GPUI thread has
     // processed the command, and a second tray click must toggle it closed.
+    FORCE_OUTSIDE_DISMISS.store(force_outside_dismiss, Ordering::SeqCst);
     POPUP_VISIBLE.store(true, Ordering::SeqCst);
     POPUP_CLOSING.store(false, Ordering::SeqCst);
     arm_outside_click_grace();
@@ -236,6 +258,7 @@ pub fn hide() {
     if !is_visible() || is_closing() {
         return;
     }
+    crate::popup_window::clear_floating_circle_slot();
     POPUP_CLOSING.store(true, Ordering::SeqCst);
     crate::popup_window::send_command(crate::popup_window::PopupCommand::Hide);
 }
@@ -418,7 +441,10 @@ fn surface_rect() -> SurfaceRect {
 
 /// Detect a new mouse press that lands outside the visible capsule.
 pub fn clicked_outside() -> bool {
-    if !is_visible() || is_pinned() || now_ms() < IGNORE_OUTSIDE_UNTIL_MS.load(Ordering::SeqCst) {
+    if !is_visible()
+        || !outside_dismiss_enabled()
+        || now_ms() < IGNORE_OUTSIDE_UNTIL_MS.load(Ordering::SeqCst)
+    {
         BUTTON_WAS_DOWN.store(any_mouse_button_down(), Ordering::SeqCst);
         return false;
     }
@@ -432,6 +458,12 @@ pub fn clicked_outside() -> bool {
         return false;
     }
     let (x, y) = cursor_position();
+    #[cfg(windows)]
+    if crate::popup_window::ui::win32::point_is_taskbar(x, y)
+        || crate::taskbar::point_is_floating_circle(x, y)
+    {
+        return false;
+    }
     !surface.contains(x, y)
 }
 
@@ -511,5 +543,14 @@ mod tests {
         assert!(!surface.contains(480, 300));
         assert!(!surface.contains(300, 700));
         assert!(!surface.contains(99, 300));
+    }
+
+    #[test]
+    fn floating_detail_card_dismisses_even_while_settings_are_open() {
+        assert!(outside_dismiss_policy(true, true, true));
+        assert!(outside_dismiss_policy(true, false, true));
+        assert!(!outside_dismiss_policy(false, false, true));
+        assert!(!outside_dismiss_policy(false, true, false));
+        assert!(outside_dismiss_policy(false, false, false));
     }
 }

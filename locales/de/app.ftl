@@ -1,4 +1,4 @@
-### Codex Minibar application messages.
+### Agent Minibar application messages.
 ### German translation; per-message English fallback. Keep $parameters unchanged.
 
 # src/provider_registry.rs
@@ -966,7 +966,7 @@ msg-60-minutes = 60 Minuten
 start-with-windows = Mit Windows starten
 
 # src/settings_window/general.rs
-open-codex-minibar-in-the-tray-when-you-sign-in = Öffnen Sie Codex Minibar in der Taskleiste, wenn Sie sich anmelden.
+open-agent-minibar-in-the-tray-when-you-sign-in = Öffnen Sie Agent Minibar in der Taskleiste, wenn Sie sich anmelden.
 
 # src/settings_window/onboarding.rs
 refresh-interval = Aktualisierungsintervall
@@ -1967,7 +1967,7 @@ app-icon = App-Symbol
 widget = Widget { $v0 }
 
 # src/settings_window/tray.rs
-the-codex-minibar-icon = Das Codex Minibar-Symbol
+the-agent-minibar-icon = Das Agent Minibar-Symbol
 
 # src/settings_window/tray.rs
 style-no-indicators = { $style } · Keine Indikatoren
@@ -2003,7 +2003,7 @@ edit = Bearbeiten
 duplicate = Duplizieren
 
 # src/settings_window/tray.rs
-shows-the-codex-minibar-icon-in-the-notification-area-it-has-no-i = Zeigt das Codex Minibar-Symbol im Benachrichtigungsbereich an. Es müssen keine Indikatoren eingerichtet werden.
+shows-the-agent-minibar-icon-in-the-notification-area-it-has-no-i = Zeigt das Agent Minibar-Symbol im Benachrichtigungsbereich an. Es müssen keine Indikatoren eingerichtet werden.
 
 # src/settings_window/tray.rs
 style = Stil
@@ -2099,10 +2099,10 @@ english = Englisch
 msg-russian = Russisch
 
 # application
-codex-minibar-settings = Codex Minibar – Einstellungen
+agent-minibar-settings = Agent Minibar – Einstellungen
 
 # application
-welcome-to-codex-minibar = Willkommen bei Codex Minibar
+welcome-to-agent-minibar = Willkommen bei Agent Minibar
 
 # application
 exit = Beenden
@@ -2652,7 +2652,7 @@ update-installing = Update wird installiert
 update-unpacking = Dateien werden entpackt…
 
 # src/updater.rs
-update-restarting = Codex Minibar wird neu gestartet
+update-restarting = Agent Minibar wird neu gestartet
 
 # src/updater.rs
 update-restarting-body = Die App öffnet sich gleich wieder.
@@ -2752,7 +2752,7 @@ taskbar-style-glance = Überblick
 taskbar-style-glance-hint = Das Anbietersymbol neben zwei Textzeilen, wie die Wetter-Schaltfläche.
 taskbar-style-rings-hint = Ein Fortschrittsring pro Kontingent mit dem Wert daneben.
 taskbar-style-bars-hint = Schmale Fortschrittsbalken neben dem Anbietersymbol.
-taskbar-menu-open = Codex Minibar öffnen
+taskbar-menu-open = Agent Minibar öffnen
 taskbar-menu-settings = Einstellungen der Taskleisten-Widgets
 taskbar-menu-hide = Taskleisten-Widgets ausblenden
 taskbar-card-left = Noch { $value }
@@ -3009,7 +3009,7 @@ banked-reset-applied = Gespeicherter Reset angewendet
 linux-no-tray-title = Kein Infobereich gefunden
 
 # src/tray.rs
-linux-no-tray-body = Aktivieren Sie die AppIndicator-Erweiterung, um Codex Minibar im Panel zu sehen. Starten Sie Codex Minibar erneut, um es zu öffnen.
+linux-no-tray-body = Aktivieren Sie die AppIndicator-Erweiterung, um Agent Minibar im Panel zu sehen. Starten Sie Agent Minibar erneut, um es zu öffnen.
 
 # src/settings_window/general.rs
 start-at-login = Bei der Anmeldung starten
@@ -3069,3 +3069,37 @@ linux-popup-shortcut-choose = Tastenkürzel festlegen
 linux-popup-shortcut-dialog-hint = Drücken Sie die gewünschte Tastenkombination. Sie wird als benutzerdefiniertes Kürzel in den Tastatureinstellungen Ihres Desktops gespeichert.
 linux-popup-shortcut-needs-modifier = Verwenden Sie Strg, Alt oder Super oder nutzen Sie F13–F24.
 linux-popup-shortcut-save-failed = Der Desktop hat das Tastenkürzel nicht übernommen. Versuchen Sie es erneut oder fügen Sie den Befehl in den Tastatureinstellungen hinzu.
+floating-circle = Schwebender Kreis
+floating-circle-description = Zeigt Kontingentringe auch bei ausgeblendeter Taskleiste über anderen Apps. Ziehen zum Verschieben, klicken zum Öffnen.
+floating-circle-color-mode = Kontingentfarbe
+floating-circle-color-gradient = Ändert sich mit dem Kontingent
+floating-circle-label-5h = 5 Std.
+floating-circle-label-1w = 1 Wo.
+floating-circle-position = Position des schwebenden Kreises
+floating-circle-position-description = Setzt den Kreis oben rechts auf dem aktuellen Bildschirm zurück.
+qwen-code-cli-folder = Qwen Code CLI folder
+folder-with-qwen-exe-qwen-cmd-or-qwen-ps1 = Folder with qwen.exe, qwen.cmd, or qwen.ps1. Leave empty to find it automatically.
+reads-qwen-code-settings-and-local-token-history = Reads Qwen Code settings and local token history without using its credentials.
+qwen-local-data = Qwen local data
+qwen-code-cli = Qwen Code CLI
+found-qwen-code-settings-or-local-history = Found Qwen Code settings or local history.
+qwen-code-settings-and-local-history-not-found = Qwen Code settings and local history were not found.
+reads-deepseek-harness-root-agent-history = Reads root and delegated Agent token usage from local DeepSeek Harness sessions. Seeded sessions are excluded.
+reads-kimi-model-local-agent-history = Reads Kimi model usage from supported local agent histories. Kimi Code sub-agents are excluded.
+reads-domestic-model-local-agent-history = Reads this model family's token usage from supported local agent histories without accessing credentials.
+floating-circle-switch-target = Switch target
+floating-circle-add-second = Add second
+floating-circle-close-this = Close circle
+provider-tab-order = Provider order
+provider-tab-order-description = Click one icon, then its destination, or drag icons to reorder provider pages.
+floating-circle-primary-target = First circle target
+floating-circle-secondary-target = Second circle target
+floating-circle-target-description = Choose the provider account whose remaining quota this circle shows.
+floating-circle-second = Second floating circle
+floating-circle-second-description = Show one optional circle below the first. Both circles move together.
+floating-circle-card-balance = Balance
+floating-circle-card-quota = Quota
+floating-circle-not-authorized = Sign in
+floating-circle-temporarily-unavailable = Try later
+floating-circle-loading-quota = Loading
+floating-circle-no-quota-api = No quota API

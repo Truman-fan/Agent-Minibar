@@ -303,9 +303,18 @@ fn instances_from_legacy(legacy: &LegacyV38) -> Migrated {
                 kiro_cli_path: legacy.kiro_cli_path.clone(),
                 ..base
             }),
-            ProviderKind::OpenCodeZen | ProviderKind::OpenCodeGo | ProviderKind::CommandCode => {
-                instances.push(base)
-            }
+            ProviderKind::OpenCodeZen
+            | ProviderKind::OpenCodeGo
+            | ProviderKind::CommandCode
+            | ProviderKind::DeepSeek
+            | ProviderKind::QwenCode
+            | ProviderKind::DeepSeekHarness
+            | ProviderKind::KimiCode
+            | ProviderKind::VolcengineArk
+            | ProviderKind::ZhipuGlm
+            | ProviderKind::MiniMaxCode
+            | ProviderKind::BaiduQianfan
+            | ProviderKind::TencentHunyuan => instances.push(base),
         }
     }
 

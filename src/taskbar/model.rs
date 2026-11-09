@@ -105,6 +105,18 @@ pub(crate) struct Row {
     pub(crate) reset: Option<String>,
 }
 
+/// Honest non-percentage value shown by the compact floating circle when a
+/// provider has no quota window to draw. It deliberately cannot carry a
+/// progress value, so balances and availability states never become fake
+/// rings.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct FloatingCardState {
+    pub(crate) label: String,
+    pub(crate) value: String,
+    pub(crate) color: Rgb,
+    pub(crate) tinted: bool,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct WidgetView {
     pub(crate) id: String,
@@ -118,6 +130,12 @@ pub(crate) struct WidgetView {
     pub(crate) show_pace: bool,
     /// The hover card: each provider the widget reads, in full.
     pub(crate) card: Vec<CardSection>,
+    /// Balance or availability state used only when no percentage quota is
+    /// available for the floating-circle card.
+    pub(crate) floating_card: Option<FloatingCardState>,
+    /// A live read failed. Cached values remain visible but get a compact
+    /// warning marker instead of silently appearing current.
+    pub(crate) floating_warning: Option<Rgb>,
 }
 
 /// One provider in the hover card: every quota it reports, not only the
@@ -346,7 +364,151 @@ pub(crate) fn resolve(
             || (!style.has_graphic() && reset == TaskbarResetDisplay::Off),
         show_pace: widget.show_pace,
         card: card_sections(widget, limits, appearance, now),
+        floating_card: None,
+        floating_warning: None,
     }
+}
+
+/// Resolve one account for the compact floating-circle surface. The normal
+/// taskbar model supplies real quota windows; this adds a truthful fallback
+/// for balance-only, local-only and unavailable providers.
+pub(crate) fn resolve_floating(
+    widget: &TaskbarWidget,
+    provider: ProviderId,
+    limits: &ProviderLimits,
+    appearance: Appearance,
+    error: Option<&str>,
+) -> WidgetView {
+    let mut view = resolve(widget, limits, appearance);
+    // Providers without percentage metrics have no indicator from which the
+    // generic taskbar model could infer an owner. The floating slot itself is
+    // the authoritative account binding.
+    view.provider = Some(provider);
+    if widget.show_icon && view.icon.is_none() {
+        view.icon = Some(icon_for(provider, appearance));
+    }
+    let provider_limits = limits.get(provider);
+    let has_percentage = view.rows.iter().any(|row| row.progress.is_some());
+    view.floating_warning = error.map(|error| {
+        if floating_error_is_authorization(error) {
+            appearance.status(Some(0))
+        } else {
+            appearance.status(Some(35))
+        }
+    });
+    if !has_percentage {
+        view.floating_card = Some(floating_fallback(
+            provider,
+            provider_limits,
+            appearance,
+            error,
+        ));
+    }
+    view
+}
+
+fn floating_fallback(
+    provider: ProviderId,
+    limits: &crate::limits::RateLimits,
+    appearance: Appearance,
+    error: Option<&str>,
+) -> FloatingCardState {
+    let provider_color = appearance.provider_tint(provider);
+    let balance = limits
+        .credits
+        .balance
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
+        .or_else(|| {
+            limits
+                .spending
+                .as_ref()
+                .and_then(|spending| spending.balance_microusd)
+                .map(|balance| crate::popup_window::format_usd(balance as f64 / 1_000_000.0))
+        });
+    if let Some(balance) = balance {
+        return FloatingCardState {
+            label: crate::i18n::tr("floating-circle-card-balance").into(),
+            value: balance,
+            color: provider_color,
+            tinted: true,
+        };
+    }
+    if limits.credits.unlimited {
+        return FloatingCardState {
+            label: crate::i18n::tr("floating-circle-card-quota").into(),
+            value: crate::i18n::tr("unlimited").into(),
+            color: provider_color,
+            tinted: true,
+        };
+    }
+    if let Some(error) = error {
+        let needs_sign_in = floating_error_is_authorization(error);
+        return FloatingCardState {
+            label: crate::i18n::tr("status").into(),
+            value: crate::i18n::tr(if needs_sign_in {
+                "floating-circle-not-authorized"
+            } else {
+                "floating-circle-temporarily-unavailable"
+            })
+            .into(),
+            color: appearance.status(Some(if needs_sign_in { 0 } else { 35 })),
+            tinted: true,
+        };
+    }
+    if limits.sampled_at.timestamp() <= 0 {
+        return FloatingCardState {
+            label: crate::i18n::tr("status").into(),
+            value: crate::i18n::tr("floating-circle-loading-quota").into(),
+            color: appearance.status(Some(35)),
+            tinted: true,
+        };
+    }
+    let local_only = limits
+        .limit_name
+        .as_deref()
+        .is_some_and(|name| name.eq_ignore_ascii_case("Local usage only"));
+    FloatingCardState {
+        label: crate::i18n::tr("status").into(),
+        value: crate::i18n::tr(
+            if local_only
+                || crate::provider_registry::descriptor(provider.kind())
+                    .metrics
+                    .is_empty()
+            {
+                "floating-circle-no-quota-api"
+            } else {
+                "unavailable"
+            },
+        )
+        .into(),
+        color: if appearance.light {
+            [95, 99, 104]
+        } else {
+            [150, 154, 160]
+        },
+        tinted: false,
+    }
+}
+
+fn floating_error_is_authorization(error: &str) -> bool {
+    if crate::popup_window::model::error_needs_sign_in(error) {
+        return true;
+    }
+    let error = error.to_ascii_lowercase();
+    [
+        "authentication failed",
+        "unauthorized",
+        "access denied",
+        "key was rejected",
+        "update the provider key",
+        "invalid api key",
+        "credential expired",
+    ]
+    .iter()
+    .any(|marker| error.contains(marker))
 }
 
 /// Every provider the widget reads, each with all of its quotas. Quotas the
@@ -475,7 +637,7 @@ pub(crate) fn resolve_visible(
 mod tests {
     use super::*;
     use crate::{
-        limits::{LimitWindow, RateLimits},
+        limits::{Credits, LimitWindow, RateLimits},
         settings::ProviderKind,
     };
 
@@ -537,6 +699,73 @@ mod tests {
         assert_eq!(view.rows[0].value, "\u{2014}");
         assert_eq!(view.rows[0].progress, None);
         assert!(!view.rows[0].tinted);
+    }
+
+    #[test]
+    fn floating_balance_uses_a_card_without_inventing_a_ring() {
+        let provider = ProviderId::primary(ProviderKind::DeepSeek);
+        let widget = TaskbarWidget::for_provider(provider);
+        let limits = ProviderLimits::from_entries([(
+            provider,
+            RateLimits {
+                sampled_at: Utc::now(),
+                credits: Credits {
+                    has_credits: true,
+                    balance: Some("¥110.00".into()),
+                    ..Credits::default()
+                },
+                ..RateLimits::default()
+            },
+        )]);
+
+        let view = resolve_floating(&widget, provider, &limits, appearance(false), None);
+
+        assert!(view.rows.is_empty());
+        let card = view.floating_card.expect("balance card");
+        assert_eq!(card.label, crate::i18n::tr("floating-circle-card-balance"));
+        assert_eq!(card.value, "¥110.00");
+        assert!(card.tinted);
+    }
+
+    #[test]
+    fn floating_local_history_explicitly_says_there_is_no_quota_api() {
+        let provider = ProviderId::primary(ProviderKind::DeepSeekHarness);
+        let widget = TaskbarWidget::for_provider(provider);
+        let limits = ProviderLimits::from_entries([(
+            provider,
+            RateLimits {
+                sampled_at: Utc::now(),
+                limit_name: Some("Local usage only".into()),
+                ..RateLimits::default()
+            },
+        )]);
+
+        let view = resolve_floating(&widget, provider, &limits, appearance(false), None);
+
+        let card = view.floating_card.expect("availability card");
+        assert_eq!(card.value, crate::i18n::tr("floating-circle-no-quota-api"));
+        assert!(!card.tinted);
+    }
+
+    #[test]
+    fn floating_read_failure_is_not_presented_as_zero_percent() {
+        let provider = ProviderId::primary(ProviderKind::Codex);
+        let widget = TaskbarWidget::for_provider(provider);
+
+        let view = resolve_floating(
+            &widget,
+            provider,
+            &ProviderLimits::default(),
+            appearance(false),
+            Some("Please sign in again"),
+        );
+
+        assert!(view.rows.iter().all(|row| row.progress.is_none()));
+        assert!(view.floating_warning.is_some());
+        assert_eq!(
+            view.floating_card.expect("authorization card").value,
+            crate::i18n::tr("floating-circle-not-authorized")
+        );
     }
 
     #[test]

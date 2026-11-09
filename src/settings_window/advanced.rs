@@ -277,7 +277,7 @@ impl SettingsWindow {
             .and_then(|dirs| dirs.document_dir().map(|dir| dir.to_path_buf()))
             .or_else(|| std::env::current_dir().ok())
             .unwrap_or_default();
-        let prompt = cx.prompt_for_new_path(&directory, Some("codex-minibar-settings.toml"));
+        let prompt = cx.prompt_for_new_path(&directory, Some("agent-minibar-settings.toml"));
         cx.spawn(async move |this, cx| {
             let Ok(Ok(Some(path))) = prompt.await else {
                 return;

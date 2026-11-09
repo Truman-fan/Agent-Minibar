@@ -201,7 +201,7 @@ fn send_refresh_intervals(
 /// Transient popups need frame-rate dismissal polling; pinned panels use the
 /// idle cadence. GPUI drives their animations without polling this bridge.
 fn bridge_surface_active() -> bool {
-    (popup::is_visible() && !popup::is_pinned())
+    (popup::is_visible() && popup::outside_dismiss_enabled())
         || popup::is_closing()
         || crate::settings_window::is_open()
 }
@@ -988,7 +988,7 @@ fn pump_popup_hotkey(
     }
 }
 
-/// Linux has no in-process hotkey: the desktop runs `codex-minibar --toggle`,
+/// Linux has no in-process hotkey: the desktop runs `agent-minibar --toggle`,
 /// which the single-instance socket delivers (`linux::instance`).
 #[cfg(not(windows))]
 fn pump_popup_hotkey(_: &mut crate::hotkey::Registration, _: &Settings, _: &mut UiState) {}
@@ -1002,25 +1002,41 @@ fn pump_taskbar_actions(settings_tx: &Sender<Settings>, ui: &mut UiState) -> boo
                 provider,
                 anchor,
                 page,
+                dismiss_on_outside_click,
+                floating_slot,
             } => {
                 if popup::is_visible() {
-                    // Same toggle as a tray click; Settings keeps its preview.
-                    if !crate::settings_window::is_open() {
+                    // The compact floating circle remains a true toggle even
+                    // while Settings is open. Taskbar widgets keep their live
+                    // preview behavior for editing.
+                    if dismiss_on_outside_click || !crate::settings_window::is_open() {
                         popup::hide();
                     }
                 } else {
                     use crate::settings::TaskbarClick;
-                    match (provider, page) {
-                        (Some(provider), TaskbarClick::Nearest) => {
+                    match (provider, page, floating_slot) {
+                        // A floating circle represents exactly one provider
+                        // account. Its detail card therefore opens that
+                        // provider's page regardless of the generic taskbar
+                        // click preference.
+                        (Some(provider), _, Some(slot)) => {
+                            crate::popup_window::request_floating_provider_view(provider, slot)
+                        }
+                        (_, _, Some(slot)) => crate::popup_window::request_floating_home_view(slot),
+                        (Some(provider), TaskbarClick::Nearest, None) => {
                             crate::popup_window::request_nearest_view(provider)
                         }
-                        (Some(provider), TaskbarClick::Tab) => {
+                        (Some(provider), TaskbarClick::Tab, None) => {
                             crate::popup_window::request_provider_view(provider)
                         }
                         _ => crate::popup_window::request_home_view(),
                     }
                     flush_popup_ui(ui);
-                    popup::show_beside(anchor.0, anchor.1);
+                    if dismiss_on_outside_click {
+                        popup::show_beside_dismissible(anchor.0, anchor.1);
+                    } else {
+                        popup::show_beside(anchor.0, anchor.1);
+                    }
                 }
             }
             crate::taskbar::Action::Edit(id) => {
@@ -1031,8 +1047,15 @@ fn pump_taskbar_actions(settings_tx: &Sender<Settings>, ui: &mut UiState) -> boo
                 show_settings_preview(ui);
                 crate::settings_window::open_taskbar();
             }
-            crate::taskbar::Action::AppSettings => {
-                show_settings_preview(ui);
+            crate::taskbar::Action::AppSettings { show_preview } => {
+                if show_preview {
+                    show_settings_preview(ui);
+                } else {
+                    // A floating-circle right click is a settings shortcut,
+                    // not a request for the quota card. Also retire a card
+                    // that was already open before Settings receives focus.
+                    popup::hide();
+                }
                 crate::settings_window::open();
             }
             crate::taskbar::Action::Hide => {
@@ -1045,6 +1068,16 @@ fn pump_taskbar_actions(settings_tx: &Sender<Settings>, ui: &mut UiState) -> boo
                 let _ = crate::updater::apply_pending_update();
             }
             crate::taskbar::Action::Exit => return true,
+            crate::taskbar::Action::MoveFloatingCircle(position) => {
+                crate::settings_window::persist_update(settings_tx.clone(), move |settings| {
+                    settings.floating_circle_position = Some(position);
+                });
+            }
+            crate::taskbar::Action::SetSecondFloatingCircle(enabled) => {
+                crate::settings_window::persist_update(settings_tx.clone(), move |settings| {
+                    settings.set_second_floating_circle(enabled);
+                });
+            }
         }
     }
     false
@@ -1117,10 +1150,9 @@ pub(super) fn pump_tray_and_dismiss(
     // Settings are a live editor for this surface. Treat the separate settings
     // window as part of the popup interaction so navigating or toggling a
     // setting cannot dismiss the preview beneath it.
-    if !crate::settings_window::is_open()
-        && !popup::is_closing()
-        && (popup::clicked_outside() || popup::escape_pressed())
-    {
+    let clicked_outside = popup::clicked_outside();
+    let escape_pressed = !crate::settings_window::is_open() && popup::escape_pressed();
+    if !popup::is_closing() && (clicked_outside || escape_pressed) {
         popup::hide();
     }
     false

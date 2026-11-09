@@ -70,7 +70,7 @@ fn truncate_tooltip(value: &str) -> String {
 
 fn widget_tooltip(widget: &TrayWidget, limits: &ProviderLimits) -> String {
     if widget.kind == TrayWidgetKind::AppIcon {
-        return "Codex Minibar".into();
+        return "Agent Minibar".into();
     }
     let mut rows = Vec::<(String, String, Vec<String>)>::new();
     for indicator in &widget.indicators {
@@ -107,7 +107,7 @@ fn widget_tooltip(widget: &TrayWidget, limits: &ProviderLimits) -> String {
         }
     }
     if rows.is_empty() {
-        return "Codex Minibar".into();
+        return "Agent Minibar".into();
     }
     truncate_tooltip(
         &rows
@@ -530,14 +530,17 @@ fn render_rings(values: &[ResolvedIndicator]) -> Vec<u8> {
 fn app_icon_pixels() -> &'static [u8] {
     static PIXELS: OnceLock<Vec<u8>> = OnceLock::new();
     PIXELS.get_or_init(|| {
-        let decoder = png::Decoder::new(
-            &include_bytes!(concat!(
-                env!("CARGO_MANIFEST_DIR"),
-                "/assets/icons/app-icon-32.png"
-            ))[..],
-        );
+        let decoder = png::Decoder::new(std::io::Cursor::new(include_bytes!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/assets/icons/app-icon-32.png"
+        ))));
         let mut reader = decoder.read_info().expect("decode embedded tray icon");
-        let mut buffer = vec![0; reader.output_buffer_size()];
+        let mut buffer = vec![
+            0;
+            reader
+                .output_buffer_size()
+                .expect("embedded tray icon output fits in memory")
+        ];
         let info = reader
             .next_frame(&mut buffer)
             .expect("read embedded tray icon");
@@ -713,7 +716,7 @@ mod platform {
                 let pixels = icon_pixels(widget, limits);
                 let tooltip = widget
                     .map(|widget| widget_tooltip(widget, limits))
-                    .unwrap_or_else(|| "Codex Minibar".into());
+                    .unwrap_or_else(|| "Agent Minibar".into());
                 let tray = TrayIconBuilder::new()
                     .with_icon(icon_from_pixels(&pixels)?)
                     .with_menu(Box::new(make_menu(update_available)?))
@@ -738,7 +741,7 @@ mod platform {
                 }
                 let tooltip = widget
                     .map(|widget| widget_tooltip(widget, limits))
-                    .unwrap_or_else(|| "Codex Minibar".into());
+                    .unwrap_or_else(|| "Agent Minibar".into());
                 if self.last_tooltips.get(index) != Some(&tooltip) {
                     tray.set_tooltip(Some(&tooltip))?;
                     if index < self.last_tooltips.len() {
@@ -840,7 +843,7 @@ mod platform {
 
     fn make_menu(update_available: bool) -> Result<Menu> {
         let header = IconMenuItem::new(
-            format!("Codex Minibar - {}", env!("CARGO_PKG_VERSION")),
+            format!("Agent Minibar - {}", env!("CARGO_PKG_VERSION")),
             false,
             None,
             None,
@@ -926,14 +929,14 @@ mod platform {
         fn id(&self) -> String {
             // Hosts remember item placement by id; keep it stable per slot.
             if self.slot == 0 {
-                "codex-minibar".into()
+                "agent-minibar".into()
             } else {
-                format!("codex-minibar-{}", self.slot)
+                format!("agent-minibar-{}", self.slot)
             }
         }
 
         fn title(&self) -> String {
-            "Codex Minibar".into()
+            "Agent Minibar".into()
         }
 
         fn category(&self) -> ksni::Category {
@@ -946,7 +949,7 @@ mod platform {
 
         fn tool_tip(&self) -> ksni::ToolTip {
             ksni::ToolTip {
-                title: "Codex Minibar".into(),
+                title: "Agent Minibar".into(),
                 description: self.tooltip.clone(),
                 ..Default::default()
             }
@@ -968,7 +971,7 @@ mod platform {
             };
             let mut items = vec![
                 StandardItem {
-                    label: format!("Codex Minibar - {}", env!("CARGO_PKG_VERSION")),
+                    label: format!("Agent Minibar - {}", env!("CARGO_PKG_VERSION")),
                     enabled: false,
                     ..Default::default()
                 }
@@ -1163,7 +1166,7 @@ mod platform {
     fn tooltip_for(widget: Option<&TrayWidget>, limits: &ProviderLimits) -> String {
         widget
             .map(|widget| widget_tooltip(widget, limits))
-            .unwrap_or_else(|| "Codex Minibar".into())
+            .unwrap_or_else(|| "Agent Minibar".into())
     }
 
     /// RGBA rows to the ARGB32 (network byte order) pixmap SNI expects.

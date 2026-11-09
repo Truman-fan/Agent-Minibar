@@ -15,7 +15,6 @@ use std::{
 use anyhow::bail;
 use anyhow::{Context, Result};
 use base64::{Engine, engine::general_purpose::STANDARD};
-use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 
 const FILE_NAME: &str = "provider-secrets.json";
@@ -299,9 +298,9 @@ pub fn contains_prefix(prefix: &str) -> bool {
 }
 
 fn path() -> Result<PathBuf> {
-    ProjectDirs::from("dev", "Codex Minibar", "Codex Minibar")
-        .map(|dirs| dirs.config_dir().join(FILE_NAME))
-        .context("could not resolve the provider secrets directory")
+    Ok(crate::app_identity::project_dirs()?
+        .config_dir()
+        .join(FILE_NAME))
 }
 
 #[cfg(windows)]

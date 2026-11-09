@@ -1,6 +1,7 @@
 /target
 *.tmp
 /dist
+/dist-*/
 /.tools
 /.vscode
 /logs/
@@ -8,10 +9,10 @@
 # Stream Deck companion build and install artifacts
 /streamdeck/node_modules/
 /streamdeck/*.streamDeckPlugin
-/streamdeck/com.vertopolkalf.codex-minibar.sdPlugin/*.js
-/streamdeck/com.vertopolkalf.codex-minibar.sdPlugin/*.js.map
-/streamdeck/com.vertopolkalf.codex-minibar.sdPlugin/bin/plugin.js
-/streamdeck/com.vertopolkalf.codex-minibar.sdPlugin/bin/*.js.map
+/streamdeck/com.trumanshow.agent-minibar.sdPlugin/*.js
+/streamdeck/com.trumanshow.agent-minibar.sdPlugin/*.js.map
+/streamdeck/com.trumanshow.agent-minibar.sdPlugin/bin/plugin.js
+/streamdeck/com.trumanshow.agent-minibar.sdPlugin/bin/*.js.map
 /streamdeck/**/logs/
 
 # Command Palette extension build artifacts

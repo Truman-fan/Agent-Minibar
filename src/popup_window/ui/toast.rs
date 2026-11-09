@@ -1393,6 +1393,7 @@ fn open_host(popup: WindowHandle<PopupRoot>, cx: &mut AsyncApp) -> Option<Window
         is_movable: false,
         is_resizable: false,
         is_minimizable: false,
+        has_native_caption_buttons: false,
         display_id: None,
         window_background: WindowBackgroundAppearance::Transparent,
         app_id: None,

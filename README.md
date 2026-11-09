@@ -1,23 +1,25 @@
 <p align="center">
-  <img src="assets/app-icon.png" alt="Codex Minibar logo" width="256" height="256">
+  <img src="assets/app-icon.png" alt="Agent Minibar logo" width="256" height="256">
 </p>
 
-<h1 align="center">Codex Minibar</h1>
+<h1 align="center">Agent Minibar</h1>
 
 <p align="center">
   <b>Free, open-source Windows and Linux tray companion for AI subscription usage limits with configurable tray widgets, a compact usage popup, notifications, auto-start, in-place updates, and local history.</b>
 </p>
 
 <p align="center">
-  <a href="https://github.com/vertopolkaLF/codex-minibar/releases">Download</a>
+  <a href="https://github.com/Truman-fan/Agent-Minibar/releases">Download</a>
   |
-  <a href="https://vertopolkalf.ru/codex-minibar/">Website</a>
+  <a href="https://github.com/Truman-fan/Agent-Minibar/">Website</a>
   |
-  <a href="https://github.com/vertopolkaLF/codex-minibar/issues">Issues</a>
+  <a href="https://gitee.com/Truman-fan/Agent-Minibar">Gitee mirror</a>
+  |
+  <a href="https://github.com/Truman-fan/Agent-Minibar/issues">Issues</a>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/downloads/vertopolkalf/codex-minibar/total?style=flat-square" alt="Downloads">
+  <img src="https://img.shields.io/github/downloads/Truman-fan/Agent-Minibar/total?style=flat-square" alt="Downloads">
   <img src="https://img.shields.io/badge/platform-Windows%2010%20%2F%2011%20%7C%20Linux-blue?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/Rust-2024-orange?style=flat-square" alt="Rust edition">
   <img src="https://img.shields.io/badge/UI-GPUI-green?style=flat-square" alt="UI framework">
@@ -27,12 +29,15 @@
 
 ## Overview
 
-Codex Minibar reads quota data from locally authenticated provider sessions and keeps subscription limits and reset times visible in the notification area. It is a native Windows application written in Rust, with the tray popup and Settings both rendered by GPUI.
+Agent Minibar reads quota data from locally authenticated provider sessions and keeps subscription limits and reset times visible in the notification area. It is a native Windows application written in Rust, with the tray popup and Settings both rendered by GPUI.
 
-> Codex Minibar is an independent project. It is not affiliated with, endorsed by, or sponsored by OpenAI.
+> Agent Minibar is an independent community project maintained by
+> [Truman_show](https://github.com/Truman-fan). It is derived from
+> [Codex Minibar](https://github.com/vertopolkaLF/codex-minibar) by Pavel Leontyev
+> and is not affiliated with, endorsed by, or sponsored by any AI provider.
 
 <p align="center">
-  <img src="docs/media/1.0.0/home.png" alt="Codex Minibar popup with Home, Usage and a provider tab">
+  <img src="docs/media/1.0.0/home.png" alt="Agent Minibar popup with Home, Usage and a provider tab">
 </p>
 
 ## Features
@@ -234,37 +239,37 @@ credential clears only its sample. A partial HTTP 429 still pauses Claude pollin
 
 ## Install
 
-1. Open the [latest release](https://github.com/vertopolkaLF/codex-minibar/releases/latest).
+1. Open the [latest release](https://github.com/Truman-fan/Agent-Minibar/releases/latest).
 2. Download the installer matching your Windows architecture (`x64` or `arm64`) and run it.
    The installer is per-user and does not require administrator rights.
 3. Alternatively, download the matching `portable.zip`, extract it, and run
-   `codex-minibar.exe`.
+   `agent-minibar.exe`.
    The NSIS installer also registers `minibar` as a launch alias for the same app.
 4. Find the icon in the notification area. If it is hidden, Windows may have tucked it under
    the `^` overflow menu, because apparently that is where delightful UX goes to die.
 
-On first run, Codex Minibar discovers Codex automatically. Open **Settings** from the tray
+On first run, Agent Minibar discovers Codex automatically. Open **Settings** from the tray
 menu if you need to choose another executable or adjust the tray widgets and notifications.
 
-To start the troubleshooting handoff, run `codex-minibar trouble` or `minibar trouble`.
+To start the troubleshooting handoff, run `agent-minibar trouble` or `minibar trouble`.
 The command scans for Codex and Claude Code, asks which one should investigate, then opens
-a terminal with the shared Codex Minibar troubleshooting prompt. The same handoff is
+a terminal with the shared Agent Minibar troubleshooting prompt. The same handoff is
 available from **Settings → Log → Run Troubleshoot with AI**.
 
 ## Linux
 
-Codex Minibar also runs on Linux desktops under Wayland and X11. Download from the
-[latest release](https://github.com/vertopolkaLF/codex-minibar/releases/latest):
+Agent Minibar also runs on Linux desktops under Wayland and X11. Download from the
+[latest release](https://github.com/Truman-fan/Agent-Minibar/releases/latest):
 
-- **Debian/Ubuntu:** `sudo apt install ./codex-minibar_<version>_amd64.deb`
-- **Any distribution, no install:** make `codex-minibar-<version>-linux-x64.AppImage` executable
+- **Debian/Ubuntu:** `sudo apt install ./agent-minibar_<version>_amd64.deb`
+- **Any distribution, no install:** make `agent-minibar-<version>-linux-x64.AppImage` executable
   and run it.
-- **Other distributions:** extract `codex-minibar-<version>-linux-x64.tar.gz` and run
-  `./install.sh` to install into `~/.local`, or run `bin/codex-minibar` in place.
+- **Other distributions:** extract `agent-minibar-<version>-linux-x64.tar.gz` and run
+  `./install.sh` to install into `~/.local`, or run `bin/agent-minibar` in place.
 
 The tray icon uses the StatusNotifierItem protocol. KDE Plasma, Xfce, Cinnamon, Budgie and
 most panels show it out of the box. On GNOME, enable the **AppIndicator and KStatusNotifierItem
-Support** extension (Ubuntu ships it enabled). Without a tray, launch `codex-minibar` again
+Support** extension (Ubuntu ships it enabled). Without a tray, launch `agent-minibar` again
 to open the popup.
 
 Click the tray icon to toggle the popup. On panels that open a menu instead (such as
@@ -280,9 +285,9 @@ Differences from Windows:
 - **Global shortcut.** On GNOME-based desktops (GNOME, Ubuntu, Pop!_OS, Budgie), **Settings →
   General → Popup shortcut** opens a dialog: press the combination you want and choose
   **Save**. Minibar writes it into the desktop's own keyboard settings as a custom shortcut
-  running `codex-minibar --toggle`, so it appears in the desktop's shortcut list and the
+  running `agent-minibar --toggle`, so it appears in the desktop's shortcut list and the
   desktop checks it for conflicts. Removing it deletes that entry. No shortcut is installed
-  until you set one. On other desktops, add a custom shortcut running `codex-minibar --toggle`
+  until you set one. On other desktops, add a custom shortcut running `agent-minibar --toggle`
   yourself; the same settings row shows the exact command and a copy button.
 - **Secrets.** API keys and saved sessions are encrypted with a key kept in your login keyring
   (Secret Service). Without a keyring service the key is kept in a file only you can read.
@@ -304,8 +309,10 @@ Differences from Windows:
 
 ## Updating
 
-By default, Codex Minibar checks GitHub Releases for updates and can install a matching
-portable package in place. You can disable update checks in Settings at any time.
+By default, Agent Minibar checks GitHub Releases first and falls back to the Gitee
+mirror when GitHub is unavailable. Automatic installation requires a published
+SHA-256 checksum; an unverified package is never installed. You can disable update
+checks in Settings at any time.
 
 ## Build from source
 
@@ -333,6 +340,10 @@ To build distributable Windows packages, run:
 ```
 
 This produces architecture-specific portable ZIP files and NSIS installers under `dist/`.
+
+The release workflow publishes a `SHA256SUMS` manifest. Source and published releases
+can be mirrored to Gitee by adding a repository secret named `GITEE_TOKEN` on GitHub;
+the token needs permission to push this repository and create release attachments.
 
 On Linux, install the build dependencies (Debian/Ubuntu shown) and use plain Cargo:
 
@@ -368,8 +379,8 @@ custom reset display, or as a combined 5h + Weekly widget.
 cd streamdeck
 npm install
 npm run build
-npx @elgato/cli@latest validate .\com.vertopolkalf.codex-minibar.sdPlugin
-npx @elgato/cli@latest pack .\com.vertopolkalf.codex-minibar.sdPlugin
+npx @elgato/cli@latest validate .\com.trumanshow.agent-minibar.sdPlugin
+npx @elgato/cli@latest pack .\com.trumanshow.agent-minibar.sdPlugin
 ```
 
 The resulting `.streamDeckPlugin` file can be opened with Stream Deck Desktop.

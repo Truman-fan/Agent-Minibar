@@ -18,6 +18,7 @@ use crate::popup_window::{model, *};
 
 pub(super) const FLOATING_HEADER_HEIGHT: f32 = 32.0;
 pub(super) const FLOATING_HEADER_ACTIONS_WIDTH: f32 = 112.0;
+const EXIT_BUTTON_WIDTH: f32 = 64.0;
 
 /// Payload carried while a provider tab is dragged to a new position.
 #[derive(Clone)]
@@ -154,7 +155,7 @@ impl PopupRoot {
                 "color/app-icon-32.png",
                 16.0,
             ))
-            .child("Codex Minibar");
+            .child("Agent Minibar");
         #[cfg(not(windows))]
         let title = title
             .on_mouse_down(
@@ -286,16 +287,27 @@ impl PopupRoot {
             !self.ui.compact_bar_visible(),
             fx::NORMAL,
         );
-        let action_count = 2.0
+        let base_icon_action_count = 2.0
             + pin_presence
             + edit_presence
             + f32::from(u8::from(self.ui.update_version.is_some()));
+        let floating_slot = crate::popup_window::floating_circle_slot().filter(|slot| *slot < 2);
+        let floating_action_count = match floating_slot {
+            Some(0) if self.ui.floating_circle_slots.len() < 2 => 2.0,
+            Some(0) => 1.0,
+            Some(1) => 2.0,
+            _ => 0.0,
+        };
+        let action_gap = size.action_spacing() as f32;
+        let icon_action_count = base_icon_action_count + floating_action_count;
+        let action_width =
+            button * icon_action_count + EXIT_BUTTON_WIDTH + action_gap * icon_action_count;
         let viewport_width = capsule_width
             - 2.0
             - size.tab_padding_left() as f32
             - size.padding_right() as f32
             - size.column_spacing() as f32
-            - (button * action_count + size.action_spacing() as f32 * (action_count - 1.0));
+            - action_width;
         let max_scroll = (content_width - viewport_width).max(0.0);
         self.tab_scroll = self.tab_scroll.clamp(0.0, max_scroll);
         let scroll = self
@@ -358,7 +370,7 @@ impl PopupRoot {
             }))
             .child(strip);
 
-        let gap = size.action_spacing() as f32;
+        let gap = action_gap;
         let mut actions = div().flex().flex_row().items_center().flex_none();
         if edit_presence > 0.0 {
             let button_element = self.render_action_button(
@@ -407,6 +419,60 @@ impl PopupRoot {
                     .child(div().absolute().left_0().top_0().child(pin)),
             );
         }
+        if let Some(slot) = floating_slot {
+            actions = actions
+                .child(self.render_action_button(
+                    if slot == 0 {
+                        "floating-switch-primary"
+                    } else {
+                        "floating-switch-secondary"
+                    },
+                    "fluent-arrow-clockwise-dashes",
+                    crate::i18n::tr("floating-circle-switch-target").into(),
+                    button,
+                    size.icon_glyph_size() as f32,
+                    false,
+                    cx.listener(|_, _: &ClickEvent, _, _| {
+                        crate::popup::hide();
+                        crate::settings_window::open_popup();
+                    }),
+                    cx,
+                ))
+                .child(div().w(px(gap)).flex_none());
+            if slot == 0 && self.ui.floating_circle_slots.len() < 2 {
+                actions = actions
+                    .child(self.render_action_button(
+                        "floating-add-secondary",
+                        "fluent-add",
+                        crate::i18n::tr("floating-circle-add-second").into(),
+                        button,
+                        size.icon_glyph_size() as f32,
+                        false,
+                        cx.listener(|_, _: &ClickEvent, _, _| {
+                            crate::popup::hide();
+                            crate::taskbar::request_second_floating_circle(true);
+                        }),
+                        cx,
+                    ))
+                    .child(div().w(px(gap)).flex_none());
+            } else if slot == 1 {
+                actions = actions
+                    .child(self.render_action_button(
+                        "floating-remove-secondary",
+                        "fluent-dismiss",
+                        crate::i18n::tr("floating-circle-close-this").into(),
+                        button,
+                        size.icon_glyph_size() as f32,
+                        false,
+                        cx.listener(|_, _: &ClickEvent, _, _| {
+                            crate::popup::hide();
+                            crate::taskbar::request_second_floating_circle(false);
+                        }),
+                        cx,
+                    ))
+                    .child(div().w(px(gap)).flex_none());
+            }
+        }
         actions = actions
             .child(self.render_refresh_button(button, size.icon_glyph_size() as f32, cx))
             .child(div().w(px(gap)).flex_none())
@@ -434,6 +500,9 @@ impl PopupRoot {
                     cx,
                 ));
         }
+        actions = actions
+            .child(div().w(px(gap)).flex_none())
+            .child(self.render_exit_button(button, cx));
 
         let corner = px((radius - 1.0).max(0.0));
         let bar = div()
@@ -706,6 +775,35 @@ impl PopupRoot {
                 glyph,
                 palette.chrome_icon.mix(palette.accent, emphasis),
             ))
+            .into_any_element()
+    }
+
+    fn render_exit_button(&mut self, height: f32, cx: &mut Context<Self>) -> AnyElement {
+        let hover_id = fx::key(("action", "exit"));
+        let hovered = self.hovered(hover_id);
+        let hover = self
+            .fx
+            .toggle(fx::key(("action-hover", hover_id)), hovered, fx::FASTER);
+        let fill = super::theme::rgb8((0xC4, 0x2B, 0x1C))
+            .mix(super::theme::rgb8((0xE8, 0x47, 0x49)), hover);
+        div()
+            .id("action-exit")
+            .w(px(EXIT_BUTTON_WIDTH))
+            .h(px(height))
+            .flex_none()
+            .flex()
+            .items_center()
+            .justify_center()
+            .rounded(px(6.0))
+            .border_1()
+            .border_color(super::theme::rgba8(255, 255, 255, 0x20))
+            .bg(fill)
+            .text_size(px(11.0))
+            .font_weight(gpui::FontWeight::SEMIBOLD)
+            .text_color(super::theme::rgba8(255, 255, 255, 0xEA))
+            .on_hover(self.hover_listener(hover_id, Some(crate::i18n::tr("exit").into()), cx))
+            .on_click(|_, _, _| crate::taskbar::request_exit())
+            .child(crate::i18n::tr("exit"))
             .into_any_element()
     }
 }

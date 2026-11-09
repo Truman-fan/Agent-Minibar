@@ -27,17 +27,18 @@ use windows_sys::Win32::{
         Input::KeyboardAndMouse::{ReleaseCapture, SetCapture},
         Shell::{DefSubclassProc, SetWindowSubclass},
         WindowsAndMessaging::{
-            EVENT_SYSTEM_FOREGROUND, FindWindowExW, GWL_EXSTYLE, GWL_STYLE, GetClassNameW,
-            GetCursorPos, GetWindowLongPtrW, GetWindowRect, HTCAPTION, HTCLIENT, HWND_TOPMOST,
-            IDC_SIZENS, LoadCursorW, MA_NOACTIVATE, SW_HIDE, SW_SHOWNOACTIVATE, SWP_FRAMECHANGED,
-            SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE, SWP_NOZORDER, SetCursor,
-            SetForegroundWindow, SetWindowLongPtrW, SetWindowPos, SetWindowTextW, ShowWindow,
-            WINEVENT_OUTOFCONTEXT, WINEVENT_SKIPOWNPROCESS, WM_CAPTURECHANGED, WM_DISPLAYCHANGE,
-            WM_DPICHANGED, WM_ENTERSIZEMOVE, WM_EXITSIZEMOVE, WM_LBUTTONDOWN, WM_LBUTTONUP,
-            WM_MOUSEACTIVATE, WM_MOUSEMOVE, WM_NCCALCSIZE, WM_NCHITTEST, WM_NCLBUTTONDBLCLK,
-            WM_SETCURSOR, WM_SETTINGCHANGE, WS_CAPTION, WS_EX_APPWINDOW, WS_EX_LAYERED,
-            WS_EX_NOACTIVATE, WS_EX_NOREDIRECTIONBITMAP, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
-            WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_POPUP, WS_SYSMENU, WS_THICKFRAME,
+            EVENT_SYSTEM_FOREGROUND, FindWindowExW, GA_ROOT, GWL_EXSTYLE, GWL_STYLE, GetAncestor,
+            GetClassNameW, GetCursorPos, GetWindowLongPtrW, GetWindowRect, HTCAPTION, HTCLIENT,
+            HWND_TOPMOST, IDC_SIZENS, LoadCursorW, MA_NOACTIVATE, SW_HIDE, SW_SHOWNOACTIVATE,
+            SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE,
+            SWP_NOZORDER, SetCursor, SetForegroundWindow, SetWindowLongPtrW, SetWindowPos,
+            SetWindowTextW, ShowWindow, WINEVENT_OUTOFCONTEXT, WINEVENT_SKIPOWNPROCESS,
+            WM_CAPTURECHANGED, WM_DISPLAYCHANGE, WM_DPICHANGED, WM_ENTERSIZEMOVE, WM_EXITSIZEMOVE,
+            WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEACTIVATE, WM_MOUSEMOVE, WM_NCCALCSIZE,
+            WM_NCHITTEST, WM_NCLBUTTONDBLCLK, WM_SETCURSOR, WM_SETTINGCHANGE, WS_CAPTION,
+            WS_EX_APPWINDOW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_NOREDIRECTIONBITMAP,
+            WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_POPUP, WS_SYSMENU,
+            WS_THICKFRAME, WindowFromPoint,
         },
     },
 };
@@ -45,7 +46,7 @@ use windows_sys::Win32::{
 const SUBCLASS_ID: usize = 0x434D_4250; // "CMBP"
 pub(crate) const SHOW_MESSAGE: u32 = 0x8000 + 0x034D;
 /// A second launch finds the running popup by this title.
-pub(crate) const POPUP_TITLE: &str = "Codex Minibar";
+pub(crate) const POPUP_TITLE: &str = "Agent Minibar";
 const DWMWCP_DONOTROUND: u32 = 1;
 const DWMNCRP_DISABLED: u32 = 1;
 
@@ -408,16 +409,10 @@ unsafe extern "system" fn foreground_changed(
 ) {
     // SetWindowPos re-enters GPUI; defer to the foreground command task.
     if crate::popup::is_visible() {
-        if !crate::popup::is_pinned() {
+        if crate::popup::outside_dismiss_enabled() {
             // The tray owns its toggle. Closing here first can make the tray
             // click interpret the closing popup as a request to reopen it.
-            let mut class = [0u16; 64];
-            let len = unsafe { GetClassNameW(hwnd, class.as_mut_ptr(), class.len() as i32) }.max(0)
-                as usize;
-            if ["Shell_TrayWnd", "Shell_SecondaryTrayWnd"]
-                .iter()
-                .any(|name| name.encode_utf16().eq(class[..len].iter().copied()))
-            {
+            if is_taskbar_window(hwnd) {
                 return;
             }
             crate::popup::hide();
@@ -425,6 +420,23 @@ unsafe extern "system" fn foreground_changed(
             crate::popup_window::send_command(crate::popup_window::PopupCommand::Raise);
         }
     }
+}
+
+fn is_taskbar_window(hwnd: HWND) -> bool {
+    let root = unsafe { GetAncestor(hwnd, GA_ROOT) };
+    let hwnd = if root.is_null() { hwnd } else { root };
+    let mut class = [0u16; 64];
+    let len =
+        unsafe { GetClassNameW(hwnd, class.as_mut_ptr(), class.len() as i32) }.max(0) as usize;
+    ["Shell_TrayWnd", "Shell_SecondaryTrayWnd"]
+        .iter()
+        .any(|name| name.encode_utf16().eq(class[..len].iter().copied()))
+}
+
+/// Whether the screen point belongs to the primary or a secondary taskbar.
+pub(crate) fn point_is_taskbar(x: i32, y: i32) -> bool {
+    let hwnd = unsafe { WindowFromPoint(POINT { x, y }) };
+    !hwnd.is_null() && is_taskbar_window(hwnd)
 }
 
 /// Restore the visible popup to the top of the topmost band. Outside any GPUI

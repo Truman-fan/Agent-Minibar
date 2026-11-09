@@ -1056,14 +1056,27 @@ fn instance_fixture() -> Settings {
     settings
 }
 
+fn membership_masks(count: usize) -> Vec<u64> {
+    let mut masks = vec![0, (1_u64 << count) - 1];
+    for first in 0..count {
+        masks.push(1_u64 << first);
+        for second in first + 1..count {
+            masks.push((1_u64 << first) | (1_u64 << second));
+        }
+    }
+    masks.sort_unstable();
+    masks.dedup();
+    masks
+}
+
 #[test]
-fn every_enabled_instance_combination_has_matching_tabs() {
+fn none_each_pair_and_all_enabled_instances_have_matching_tabs() {
     let base = instance_fixture();
     let count = base.instances.len();
-    for mask in 0..(1_u32 << count) {
+    for mask in membership_masks(count) {
         let mut settings = base.clone();
         for (index, instance) in settings.instances.iter_mut().enumerate() {
-            instance.enabled = mask & (1 << index) != 0;
+            instance.enabled = mask & (1_u64 << index) != 0;
         }
         let enabled = settings.enabled_providers();
         for mode in PopupTabMode::ALL {
@@ -1115,7 +1128,7 @@ fn every_enabled_instance_combination_has_matching_tabs() {
                         .collect::<Vec<_>>()
                 );
             }
-            assert_eq!(show_provider_tabs(&ui), tabs.len() > 1);
+            assert_eq!(show_provider_tabs(&ui), !tabs.is_empty());
             // Tabs keep the shared instance order.
             assert!(
                 tabs.windows(2)

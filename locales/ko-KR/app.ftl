@@ -1,4 +1,4 @@
-### Codex Minibar application messages.
+### Agent Minibar application messages.
 ### Korean translation; English per-message fallback. Keep $parameters unchanged.
 
 # src/provider_registry.rs
@@ -979,7 +979,7 @@ msg-60-minutes = 60분
 start-with-windows = Windows 시작 시 실행
 
 # src/settings_window/general.rs
-open-codex-minibar-in-the-tray-when-you-sign-in = 로그인 시 트레이에서 Codex Minibar를 엽니다.
+open-agent-minibar-in-the-tray-when-you-sign-in = 로그인 시 트레이에서 Agent Minibar를 엽니다.
 
 # src/settings_window/onboarding.rs
 refresh-interval = 새로 고침 간격
@@ -1980,7 +1980,7 @@ app-icon = 앱 아이콘
 widget = 위젯 { $v0 }
 
 # src/settings_window/tray.rs
-the-codex-minibar-icon = Codex Minibar 아이콘
+the-agent-minibar-icon = Agent Minibar 아이콘
 
 # src/settings_window/tray.rs
 style-no-indicators = { $style } · 표시 없음
@@ -2016,7 +2016,7 @@ edit = 편집
 duplicate = 복제
 
 # src/settings_window/tray.rs
-shows-the-codex-minibar-icon-in-the-notification-area-it-has-no-i = 알림 영역에 Codex Minibar 아이콘이 표시됩니다. 설정할 표시가 없습니다.
+shows-the-agent-minibar-icon-in-the-notification-area-it-has-no-i = 알림 영역에 Agent Minibar 아이콘이 표시됩니다. 설정할 표시가 없습니다.
 
 # src/settings_window/tray.rs
 style = 스타일
@@ -2112,10 +2112,10 @@ english = 영어
 msg-russian = Русский
 
 # application
-codex-minibar-settings = Codex Minibar 설정
+agent-minibar-settings = Agent Minibar 설정
 
 # application
-welcome-to-codex-minibar = Codex Minibar에 오신 것을 환영합니다
+welcome-to-agent-minibar = Agent Minibar에 오신 것을 환영합니다
 
 # application
 exit = 종료
@@ -2630,7 +2630,7 @@ update-installing = 업데이트 설치 중
 update-unpacking = 파일 압축을 푸는 중…
 
 # src/updater.rs
-update-restarting = Codex Minibar 다시 시작
+update-restarting = Agent Minibar 다시 시작
 
 # src/updater.rs
 update-restarting-body = 잠시 후 앱이 다시 열립니다.
@@ -2730,7 +2730,7 @@ taskbar-style-glance = 한눈에
 taskbar-style-glance-hint = 날씨 버튼과 같은 두 줄의 텍스트 옆에 있는 공급자 아이콘입니다.
 taskbar-style-rings-hint = 옆에 값이 있는 할당량당 진행 링입니다.
 taskbar-style-bars-hint = 공급자 아이콘 옆에 얇은 진행률 표시줄이 쌓였습니다.
-taskbar-menu-open = Codex Minibar 열기
+taskbar-menu-open = Agent Minibar 열기
 taskbar-menu-settings = 작업 표시줄 위젯 설정
 taskbar-menu-hide = 작업 표시줄 위젯 숨기기
 taskbar-card-left = { $value } 남음
@@ -2987,7 +2987,7 @@ banked-reset-applied = 적립된 재설정이 적용됨
 linux-no-tray-title = 시스템 트레이를 찾을 수 없음
 
 # src/tray.rs
-linux-no-tray-body = 패널에 Codex Minibar를 표시하려면 AppIndicator 확장을 켜세요. Codex Minibar를 다시 실행하면 열립니다.
+linux-no-tray-body = 패널에 Agent Minibar를 표시하려면 AppIndicator 확장을 켜세요. Agent Minibar를 다시 실행하면 열립니다.
 
 # src/settings_window/general.rs
 start-at-login = 로그인 시 시작
@@ -3047,3 +3047,37 @@ linux-popup-shortcut-choose = 단축키 설정
 linux-popup-shortcut-dialog-hint = 사용할 키 조합을 누르세요. 데스크톱의 키보드 설정에 사용자 지정 단축키로 저장됩니다.
 linux-popup-shortcut-needs-modifier = Ctrl, Alt 또는 Super를 포함하거나 F13–F24를 사용하세요.
 linux-popup-shortcut-save-failed = 데스크톱에서 단축키를 받아들이지 않았습니다. 다시 시도하거나 키보드 설정에서 명령을 추가하세요.
+floating-circle = 플로팅 원
+floating-circle-description = 작업 표시줄이 숨겨져도 할당량 링을 다른 앱 위에 표시합니다. 드래그하여 이동하고 클릭하여 팝업을 엽니다.
+floating-circle-color-mode = 할당량 색상
+floating-circle-color-gradient = 할당량에 따라 변경
+floating-circle-label-5h = 5시간
+floating-circle-label-1w = 1주
+floating-circle-position = 플로팅 원 위치
+floating-circle-position-description = 원을 현재 디스플레이의 오른쪽 위로 재설정합니다.
+qwen-code-cli-folder = Qwen Code CLI folder
+folder-with-qwen-exe-qwen-cmd-or-qwen-ps1 = Folder with qwen.exe, qwen.cmd, or qwen.ps1. Leave empty to find it automatically.
+reads-qwen-code-settings-and-local-token-history = Reads Qwen Code settings and local token history without using its credentials.
+qwen-local-data = Qwen local data
+qwen-code-cli = Qwen Code CLI
+found-qwen-code-settings-or-local-history = Found Qwen Code settings or local history.
+qwen-code-settings-and-local-history-not-found = Qwen Code settings and local history were not found.
+reads-deepseek-harness-root-agent-history = Reads root and delegated Agent token usage from local DeepSeek Harness sessions. Seeded sessions are excluded.
+reads-kimi-model-local-agent-history = Reads Kimi model usage from supported local agent histories. Kimi Code sub-agents are excluded.
+reads-domestic-model-local-agent-history = Reads this model family's token usage from supported local agent histories without accessing credentials.
+floating-circle-switch-target = Switch target
+floating-circle-add-second = Add second
+floating-circle-close-this = Close circle
+provider-tab-order = Provider order
+provider-tab-order-description = Click one icon, then its destination, or drag icons to reorder provider pages.
+floating-circle-primary-target = First circle target
+floating-circle-secondary-target = Second circle target
+floating-circle-target-description = Choose the provider account whose remaining quota this circle shows.
+floating-circle-second = Second floating circle
+floating-circle-second-description = Show one optional circle below the first. Both circles move together.
+floating-circle-card-balance = Balance
+floating-circle-card-quota = Quota
+floating-circle-not-authorized = Sign in
+floating-circle-temporarily-unavailable = Try later
+floating-circle-loading-quota = Loading
+floating-circle-no-quota-api = No quota API

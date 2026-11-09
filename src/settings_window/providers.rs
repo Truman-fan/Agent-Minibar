@@ -40,13 +40,22 @@ impl ProviderInstallStatus {
         match provider {
             ProviderKind::Kiro => Self::checking_kiro(),
             ProviderKind::Grok | ProviderKind::CommandCode => Self::checking_cli(),
-            ProviderKind::Codex | ProviderKind::Claude | ProviderKind::Antigravity => {
-                Self::checking()
-            }
+            ProviderKind::Codex
+            | ProviderKind::Claude
+            | ProviderKind::Antigravity
+            | ProviderKind::QwenCode
+            | ProviderKind::DeepSeekHarness
+            | ProviderKind::KimiCode => Self::checking(),
             ProviderKind::Cursor
             | ProviderKind::OpenCodeZen
             | ProviderKind::OpenCodeGo
-            | ProviderKind::OpenRouter => Self::checking_app(),
+            | ProviderKind::OpenRouter
+            | ProviderKind::DeepSeek
+            | ProviderKind::VolcengineArk
+            | ProviderKind::ZhipuGlm
+            | ProviderKind::MiniMaxCode
+            | ProviderKind::BaiduQianfan
+            | ProviderKind::TencentHunyuan => Self::checking_app(),
         }
     }
 
@@ -139,6 +148,20 @@ pub(crate) fn instance_install_status(instance: &ProviderInstance) -> ProviderIn
                 ..provider_install_status(instance.driver, "")
             }
         }
+        ProviderKind::DeepSeek => {
+            let detected = crate::deepseek::is_installed(provider);
+            ProviderInstallStatus {
+                app: detected.then(|| {
+                    if crate::deepseek::key_is_configured(provider) {
+                        crate::i18n::tr("saved-api-key").into()
+                    } else {
+                        "DEEPSEEK_API_KEY".into()
+                    }
+                }),
+                used: detected.then_some(ProviderInstallSource::App),
+                ..provider_install_status(ProviderKind::DeepSeek, "")
+            }
+        }
         ProviderKind::Claude if instance.uses_manual_credential() => {
             let detected = crate::claude::load_manual_credential(&instance.id)
                 .ok()
@@ -216,7 +239,53 @@ pub(crate) fn provider_install_status(
                 detected.then(|| crate::i18n::tr("opencode-auth-json-or-local-database").into());
             (detail, None, detected.then_some(ProviderInstallSource::App))
         }
+        ProviderKind::QwenCode => {
+            let app = crate::qwen_code::local_source_path();
+            let cli = crate::qwen_code::cli_available(configured_folder);
+            let used = if app.is_some() {
+                Some(ProviderInstallSource::App)
+            } else {
+                cli.as_ref().map(|_| ProviderInstallSource::Cli)
+            };
+            (
+                app.as_deref().map(display_fs_path),
+                cli.as_deref().map(display_fs_path),
+                used,
+            )
+        }
+        ProviderKind::DeepSeekHarness
+        | ProviderKind::KimiCode
+        | ProviderKind::VolcengineArk
+        | ProviderKind::ZhipuGlm
+        | ProviderKind::MiniMaxCode
+        | ProviderKind::BaiduQianfan
+        | ProviderKind::TencentHunyuan => {
+            let app = crate::domestic_agents::local_source_path(provider);
+            let cli = crate::domestic_agents::cli_available(provider, configured_folder);
+            let used = if app.is_some() {
+                Some(ProviderInstallSource::App)
+            } else {
+                cli.as_ref().map(|_| ProviderInstallSource::Cli)
+            };
+            (
+                app.as_deref().map(display_fs_path),
+                cli.as_deref().map(display_fs_path),
+                used,
+            )
+        }
         ProviderKind::OpenRouter => (None, None, None),
+        ProviderKind::DeepSeek => {
+            let provider = ProviderId::primary(ProviderKind::DeepSeek);
+            let detected = crate::deepseek::is_installed(provider);
+            let detail = detected.then(|| {
+                if crate::deepseek::key_is_configured(provider) {
+                    crate::i18n::tr("saved-api-key").into()
+                } else {
+                    "DEEPSEEK_API_KEY".into()
+                }
+            });
+            (detail, None, detected.then_some(ProviderInstallSource::App))
+        }
         ProviderKind::Antigravity => {
             let app = crate::antigravity::desktop_app(configured_folder);
             let cli = crate::antigravity::cli_available(configured_folder);
@@ -265,6 +334,9 @@ pub(crate) fn provider_install_status(
                 | ProviderKind::Antigravity
                 | ProviderKind::Grok
                 | ProviderKind::CommandCode
+                | ProviderKind::QwenCode
+                | ProviderKind::DeepSeekHarness
+                | ProviderKind::KimiCode
         ),
         checking: false,
     }
@@ -505,6 +577,23 @@ fn persist_opencode_manual_key(
     Ok(())
 }
 
+fn persist_deepseek_manual_key(
+    settings_tx: Sender<Settings>,
+    provider: ProviderId,
+    value: Option<String>,
+) -> anyhow::Result<()> {
+    let rollback = crate::deepseek::apply_manual_key(provider, value.as_deref())?;
+    if let Err(error) = bump_credentials(settings_tx, provider) {
+        return match crate::deepseek::restore_manual_key(rollback) {
+            Ok(()) => Err(error),
+            Err(rollback_error) => Err(anyhow::anyhow!(
+                "could not save credential revision ({error:#}); restoring the protected key also failed ({rollback_error:#})"
+            )),
+        };
+    }
+    Ok(())
+}
+
 /// Keep the existing credential when validation or the settings commit fails.
 fn persist_claude_manual_credential(
     settings_tx: Sender<Settings>,
@@ -537,6 +626,11 @@ fn forget_instance_secrets(instance: &ProviderInstance) {
         ProviderKind::OpenCodeZen | ProviderKind::OpenCodeGo => {
             if let Err(error) = crate::opencode::save_manual_key(provider, None) {
                 eprintln!("failed to delete the OpenCode key: {error:#}");
+            }
+        }
+        ProviderKind::DeepSeek => {
+            if let Err(error) = crate::deepseek::save_manual_key(provider, None) {
+                eprintln!("failed to delete the DeepSeek key: {error:#}");
             }
         }
         ProviderKind::OpenRouter => {
@@ -668,6 +762,21 @@ fn folder_configs(driver: ProviderKind) -> Vec<FolderConfig> {
             crate::i18n::tr("folder-with-cmdc-cmd-or-cmdc-ps1-leave-empty-to-find-it-automati"),
             r"C:\Users\you\AppData\Roaming\npm",
         )],
+        ProviderKind::QwenCode => vec![binary(
+            crate::i18n::tr("qwen-code-cli-folder"),
+            crate::i18n::tr("folder-with-qwen-exe-qwen-cmd-or-qwen-ps1"),
+            r"C:\Users\you\AppData\Roaming\npm",
+        )],
+        ProviderKind::DeepSeekHarness => vec![binary(
+            "DeepSeek Harness CLI folder",
+            "Folder with dsh.exe, dsh.cmd or dsh.ps1. Leave empty to find it automatically.",
+            r"C:\Users\you\AppData\Roaming\npm",
+        )],
+        ProviderKind::KimiCode => vec![binary(
+            "Kimi Code CLI folder",
+            "Folder with kimi.exe, kimi.cmd or kimi.ps1. Leave empty to find it automatically.",
+            r"C:\Users\you\AppData\Roaming\npm",
+        )],
         ProviderKind::Kiro => vec![
             binary(
                 crate::i18n::tr("kiro-ide-folder"),
@@ -693,9 +802,15 @@ fn folder_configs(driver: ProviderKind) -> Vec<FolderConfig> {
                 placeholder: r"C:\Users\you\AppData\Local\kiro-cli",
             },
         ],
-        ProviderKind::OpenCodeZen | ProviderKind::OpenCodeGo | ProviderKind::OpenRouter => {
-            Vec::new()
-        }
+        ProviderKind::OpenCodeZen
+        | ProviderKind::OpenCodeGo
+        | ProviderKind::OpenRouter
+        | ProviderKind::DeepSeek
+        | ProviderKind::VolcengineArk
+        | ProviderKind::ZhipuGlm
+        | ProviderKind::MiniMaxCode
+        | ProviderKind::BaiduQianfan
+        | ProviderKind::TencentHunyuan => Vec::new(),
     }
 }
 
@@ -725,6 +840,21 @@ fn provider_description(provider: ProviderKind) -> &'static str {
         ProviderKind::CommandCode => {
             crate::i18n::tr("reads-command-code-5h-weekly-and-monthly-credits-from-your-existin")
         }
+        ProviderKind::DeepSeek => "Reads the official DeepSeek API account balance.",
+        ProviderKind::QwenCode => {
+            crate::i18n::tr("reads-qwen-code-settings-and-local-token-history")
+        }
+        ProviderKind::DeepSeekHarness => {
+            crate::i18n::tr("reads-deepseek-harness-root-agent-history")
+        }
+        ProviderKind::KimiCode => crate::i18n::tr("reads-kimi-model-local-agent-history"),
+        ProviderKind::VolcengineArk
+        | ProviderKind::ZhipuGlm
+        | ProviderKind::MiniMaxCode
+        | ProviderKind::BaiduQianfan
+        | ProviderKind::TencentHunyuan => {
+            crate::i18n::tr("reads-domestic-model-local-agent-history")
+        }
     }
 }
 
@@ -753,6 +883,19 @@ fn source_labels(provider: ProviderKind) -> (&'static str, &'static str, &'stati
         ProviderKind::OpenCodeZen | ProviderKind::OpenCodeGo | ProviderKind::OpenRouter => {
             ("", "", "")
         }
+        ProviderKind::DeepSeek => ("DeepSeek API", "", ""),
+        ProviderKind::QwenCode => (
+            crate::i18n::tr("qwen-local-data"),
+            "",
+            crate::i18n::tr("qwen-code-cli"),
+        ),
+        ProviderKind::DeepSeekHarness => ("DeepSeek Harness sessions", "", "dsh CLI"),
+        ProviderKind::KimiCode => ("Kimi Code main-agent history", "", "Kimi Code CLI"),
+        ProviderKind::VolcengineArk
+        | ProviderKind::ZhipuGlm
+        | ProviderKind::MiniMaxCode
+        | ProviderKind::BaiduQianfan
+        | ProviderKind::TencentHunyuan => ("Supported local agent history", "", ""),
     }
 }
 

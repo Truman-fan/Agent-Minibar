@@ -23,6 +23,13 @@ const KEY_FILE: &str = "secrets.key";
 
 fn attributes() -> Vec<(&'static str, &'static str)> {
     vec![
+        ("application", "agent-minibar"),
+        ("purpose", "provider-secrets-key"),
+    ]
+}
+
+fn legacy_attributes() -> Vec<(&'static str, &'static str)> {
+    vec![
         ("application", "codex-minibar"),
         ("purpose", "provider-secrets-key"),
     ]
@@ -40,10 +47,17 @@ fn master_key() -> Result<&'static Zeroizing<[u8; KEY_LEN]>> {
 
 fn load_or_create_key() -> Result<Zeroizing<[u8; KEY_LEN]>> {
     let keyring = futures::executor::block_on(oo7::Keyring::new());
-    if let Ok(keyring) = &keyring
-        && let Some(key) = futures::executor::block_on(read_keyring(keyring))
-    {
-        return Ok(key);
+    if let Ok(keyring) = &keyring {
+        if let Some(key) = futures::executor::block_on(read_keyring(keyring, &attributes())) {
+            return Ok(key);
+        }
+        if let Some(key) = futures::executor::block_on(read_keyring(keyring, &legacy_attributes()))
+        {
+            // Keep the legacy item for rollback, but seed the new identity so
+            // future starts no longer depend on the upstream product name.
+            let _ = futures::executor::block_on(write_keyring(keyring, &key));
+            return Ok(key);
+        }
     }
     // A key file wins over creating a new keyring item: secrets sealed
     // while no keyring was running must stay readable.
@@ -67,9 +81,12 @@ fn load_or_create_key() -> Result<Zeroizing<[u8; KEY_LEN]>> {
     Ok(key)
 }
 
-async fn read_keyring(keyring: &oo7::Keyring) -> Option<Zeroizing<[u8; KEY_LEN]>> {
+async fn read_keyring(
+    keyring: &oo7::Keyring,
+    attributes: &[(&str, &str)],
+) -> Option<Zeroizing<[u8; KEY_LEN]>> {
     keyring.unlock().await.ok()?;
-    let items = keyring.search_items(&attributes()).await.ok()?;
+    let items = keyring.search_items(attributes).await.ok()?;
     for item in items {
         if item.unlock().await.is_err() {
             continue;
@@ -90,7 +107,7 @@ async fn write_keyring(keyring: &oo7::Keyring, key: &[u8; KEY_LEN]) -> Result<()
     keyring.unlock().await?;
     keyring
         .create_item(
-            "Codex Minibar provider secrets key",
+            "Agent Minibar provider secrets key",
             &attributes(),
             key.to_vec(),
             true,
@@ -100,9 +117,9 @@ async fn write_keyring(keyring: &oo7::Keyring, key: &[u8; KEY_LEN]) -> Result<()
 }
 
 fn key_file() -> Result<PathBuf> {
-    directories::ProjectDirs::from("dev", "Codex Minibar", "Codex Minibar")
-        .map(|dirs| dirs.config_dir().join(KEY_FILE))
-        .context("could not resolve the provider secrets directory")
+    Ok(crate::app_identity::project_dirs()?
+        .config_dir()
+        .join(KEY_FILE))
 }
 
 fn read_key_file() -> Result<Option<Zeroizing<[u8; KEY_LEN]>>> {

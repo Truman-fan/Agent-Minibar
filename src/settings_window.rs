@@ -16,6 +16,9 @@ use std::{
     },
 };
 
+#[cfg(windows)]
+use std::time::Duration;
+
 use gpui::{
     AppContext, AsyncApp, Bounds, Point, TitlebarOptions, WindowBackgroundAppearance, WindowBounds,
     WindowHandle, WindowKind, WindowOptions, px, size,
@@ -58,18 +61,18 @@ pub(crate) use providers::{OpenRouterSettingsSnapshot, persist_openrouter_creden
 
 const WINDOW_WIDTH: f32 = 1000.0;
 const WINDOW_HEIGHT: f32 = 740.0;
-// The layouts are not built for full-screen widths, so the windows cannot be
-// maximized and stop growing at this size.
+// Onboarding remains size-capped. Settings keeps its content width constrained
+// internally, but the window itself may maximize like a normal Windows app.
 const WINDOW_MAX_SIZE: (f32, f32) = (1240.0, 960.0);
 /// Smallest Settings window that keeps rows, descriptions and controls readable.
 const WINDOW_MIN_SIZE: (f32, f32) = (860.0, 560.0);
 const ONBOARDING_WIDTH: f32 = 780.0;
 const ONBOARDING_HEIGHT: f32 = 560.0;
 pub(crate) fn settings_window_title() -> &'static str {
-    crate::i18n::tr("codex-minibar-settings")
+    crate::i18n::tr("agent-minibar-settings")
 }
 pub(crate) fn onboarding_window_title() -> &'static str {
-    crate::i18n::tr("welcome-to-codex-minibar")
+    crate::i18n::tr("welcome-to-agent-minibar")
 }
 
 static SETTINGS_OPEN: AtomicBool = AtomicBool::new(false);
@@ -99,6 +102,8 @@ pub(crate) enum Command {
     OpenTaskbar(Option<String>),
     /// Open Settings on Integrations, where the Command Palette lives.
     OpenCommandPalette,
+    /// Open Settings on the popup and floating-circle customization page.
+    OpenPopup,
 }
 
 fn post(command: Command) {
@@ -118,6 +123,10 @@ pub fn open_taskbar() {
 /// Open Settings on the Command Palette extension and its Dock bands.
 pub fn open_command_palette() {
     post(Command::OpenCommandPalette);
+}
+
+pub fn open_popup() {
+    post(Command::OpenPopup);
 }
 
 /// Open Settings on the editor of the taskbar widget `id`.
@@ -302,6 +311,15 @@ pub(crate) fn handle(command: Command, state: &Arc<AppState>, cx: &mut AsyncApp)
             }
             with_settings_window(cx, |root, cx| root.open_tab(nav::Tab::Integrations, cx));
         }
+        Command::OpenPopup => {
+            if focus_existing(&ONBOARDING_WINDOW, cx) {
+                return;
+            }
+            if !focus_existing(&SETTINGS_WINDOW, cx) {
+                open_settings_window(Arc::clone(state), cx);
+            }
+            with_settings_window(cx, |root, cx| root.open_tab(nav::Tab::Popup, cx));
+        }
     }
 }
 
@@ -326,7 +344,10 @@ fn focus_existing<V: 'static>(
         return false;
     };
     let alive = handle
-        .update(cx, |_, window, _| window.activate_window())
+        .update(cx, |_, window, _| {
+            window.activate_window();
+            window.refresh();
+        })
         .is_ok();
     if !alive {
         slot.with(|slot| slot.borrow_mut().take());
@@ -348,7 +369,7 @@ fn window_options(
     width: f32,
     height: f32,
     min: (f32, f32),
-    max: (f32, f32),
+    max: Option<(f32, f32)>,
     cx: &gpui::App,
 ) -> WindowOptions {
     let bounds = Bounds::centered(None, size(px(width), px(height)), cx);
@@ -365,14 +386,15 @@ fn window_options(
         is_movable: true,
         is_resizable: true,
         is_minimizable: true,
+        has_native_caption_buttons: false,
         display_id: None,
         window_background: WindowBackgroundAppearance::Opaque,
         #[cfg(windows)]
-        app_id: Some("CodexMinibar".into()),
+        app_id: Some("AgentMinibar".into()),
         #[cfg(not(windows))]
         app_id: Some(crate::linux::identity::APP_ID.into()),
         window_min_size: Some(size(px(min.0), px(min.1))),
-        window_max_size: Some(size(px(max.0), px(max.1))),
+        window_max_size: max.map(|max| size(px(max.0), px(max.1))),
         // Linux: our own caption is the title bar. GPUI would otherwise ask
         // X11 and KDE window managers for a second, native one.
         window_decorations: (!cfg!(windows)).then_some(gpui::WindowDecorations::Client),
@@ -387,7 +409,7 @@ fn open_settings_window(state: Arc<AppState>, cx: &mut AsyncApp) {
             WINDOW_WIDTH,
             WINDOW_HEIGHT,
             WINDOW_MIN_SIZE,
-            WINDOW_MAX_SIZE,
+            None,
             cx,
         );
         cx.open_window(options, |window, cx| {
@@ -399,6 +421,7 @@ fn open_settings_window(state: Arc<AppState>, cx: &mut AsyncApp) {
             SETTINGS_OPEN.store(true, Ordering::SeqCst);
             SETTINGS_WINDOW.with(|slot| *slot.borrow_mut() = Some(handle));
             let _ = handle.update(cx, |_, window, _| window.activate_window());
+            schedule_initial_redraw(handle, cx);
         }
         Ok(Err(error)) => eprintln!("Could not open settings window: {error:#}"),
         Err(error) => eprintln!("Could not open settings window: {error:#}"),
@@ -412,7 +435,7 @@ fn open_onboarding_window(state: Arc<AppState>, cx: &mut AsyncApp) {
             ONBOARDING_WIDTH,
             ONBOARDING_HEIGHT,
             (560.0, 420.0),
-            WINDOW_MAX_SIZE,
+            Some(WINDOW_MAX_SIZE),
             cx,
         );
         cx.open_window(options, |window, cx| {
@@ -431,11 +454,31 @@ fn open_onboarding_window(state: Arc<AppState>, cx: &mut AsyncApp) {
                 crate::popup::show_on_primary();
             }
             let _ = handle.update(cx, |_, window, _| window.activate_window());
+            schedule_initial_redraw(handle, cx);
         }
         Ok(Err(error)) => eprintln!("Could not open onboarding: {error:#}"),
         Err(error) => eprintln!("Could not open onboarding: {error:#}"),
     }
 }
+
+/// Force one presentation after driver overlays have had a chance to attach.
+/// A static first frame otherwise has no later invalidation to recover from an
+/// intercepted initial Present, which can leave the window visibly blank.
+#[cfg(windows)]
+fn schedule_initial_redraw<V: 'static>(handle: WindowHandle<V>, cx: &AsyncApp) {
+    cx.spawn(async move |cx| {
+        cx.background_executor()
+            .timer(Duration::from_millis(150))
+            .await;
+        let _ = handle.update(cx, |_, window, _| {
+            window.refresh();
+        });
+    })
+    .detach();
+}
+
+#[cfg(not(windows))]
+fn schedule_initial_redraw<V: 'static>(_: WindowHandle<V>, _: &AsyncApp) {}
 
 /// Called by a window as it closes.
 pub(crate) fn window_closed(onboarding: bool) {

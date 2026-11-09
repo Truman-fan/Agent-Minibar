@@ -159,21 +159,21 @@ jobs:
       - name: Validate and pack Stream Deck plugin
         working-directory: streamdeck
         run: |
-          npx streamdeck validate .\com.vertopolkalf.codex-minibar.sdPlugin
+          npx streamdeck validate .\com.trumanshow.agent-minibar.sdPlugin
           npm run pack
 
       - name: Stage Stream Deck release asset
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $pluginManifest = Get-Content -Raw "streamdeck/com.vertopolkalf.codex-minibar.sdPlugin/manifest.json" | ConvertFrom-Json
-          $pluginPackage = "data/com.vertopolkalf.codex-minibar.streamDeckPlugin"
+          $pluginManifest = Get-Content -Raw "streamdeck/com.trumanshow.agent-minibar.sdPlugin/manifest.json" | ConvertFrom-Json
+          $pluginPackage = "data/com.trumanshow.agent-minibar.streamDeckPlugin"
           if (-not (Test-Path -LiteralPath $pluginPackage -PathType Leaf)) {
             throw "Stream Deck package was not created at $pluginPackage"
           }
           $assetDirectory = "streamdeck-asset"
           New-Item -ItemType Directory -Path $assetDirectory -Force | Out-Null
-          $assetName = "codex-minibar-streamdeck-$($pluginManifest.Version).streamDeckPlugin"
+          $assetName = "agent-minibar-streamdeck-$($pluginManifest.Version).streamDeckPlugin"
           Copy-Item -LiteralPath $pluginPackage -Destination (Join-Path $assetDirectory $assetName)
           Write-Host "Staged $assetName"
 
@@ -201,10 +201,29 @@ jobs:
           merge-multiple: true
           path: dist/${{ needs.version.outputs.version }}
 
+      - name: Generate SHA-256 manifest
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $assetDir = Join-Path "dist" $env:VERSION
+          $manifest = Join-Path $assetDir "SHA256SUMS"
+          $lines = Get-ChildItem -LiteralPath $assetDir -File |
+            Where-Object Name -ne "SHA256SUMS" |
+            Sort-Object Name |
+            ForEach-Object {
+              $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash.ToLowerInvariant()
+              "$hash *$($_.Name)"
+            }
+          if ($lines.Count -eq 0) {
+            throw "No release assets found in $assetDir"
+          }
+          $lines | Set-Content -LiteralPath $manifest -Encoding utf8NoBOM
+          Write-Host "Generated $manifest for $($lines.Count) assets"
+
       - name: Upload combined artifact
         uses: actions/upload-artifact@v7
         with:
-          name: codex-minibar-${{ needs.version.outputs.version }}
+          name: agent-minibar-${{ needs.version.outputs.version }}
           path: dist/${{ needs.version.outputs.version }}/*
           if-no-files-found: error
 
@@ -236,7 +255,7 @@ jobs:
             }
           } else {
             Write-Host "Creating draft $tag"
-            gh release create $tag @assets --draft --title "Codex Minibar $version" --generate-notes --target $env:GITHUB_SHA
+            gh release create $tag @assets --draft --title "Agent Minibar $version" --generate-notes --target $env:GITHUB_SHA
             if ($LASTEXITCODE -ne 0) {
               throw "gh release create failed with exit code $LASTEXITCODE"
             }

@@ -26,8 +26,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      # The website now lives at https://vertopolkalf.ru/codex-minibar/ (lf-website repo).
-      # Pages only serves a redirect there; 404.html catches old deep links.
+      # The project homepage is the primary GitHub repository. Pages only
+      # serves a redirect there; 404.html catches old deep links.
       - name: Assemble redirect
         run: |
           mkdir -p _site

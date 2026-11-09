@@ -30,10 +30,10 @@ use crate::{
 };
 
 pub const FEED_URL: &str =
-    "https://raw.githubusercontent.com/vertopolkaLF/codex-minibar/main/data/codex-resets.json";
+    "https://raw.githubusercontent.com/Truman-fan/Agent-Minibar/main/data/codex-resets.json";
 const FEED_SCHEMA_VERSION: u8 = 2;
 const LEGACY_FEED_SCHEMA_VERSION: u8 = 1;
-const USER_AGENT: &str = "codex-minibar-reset-feed";
+const USER_AGENT: &str = "agent-minibar-reset-feed";
 const MAX_FEED_ENTRIES: usize = 32;
 const MAX_NOTIFIED_IDS: usize = 256;
 /// Past announcements stay cached this long so a reset that never arrived can

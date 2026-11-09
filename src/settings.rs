@@ -7,10 +7,9 @@ use std::{
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, Local, Timelike};
-use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 
-pub const SETTINGS_VERSION: u32 = 41;
+pub const SETTINGS_VERSION: u32 = 47;
 /// First version where the taskbar widget is shown by default.
 const TASKBAR_DEFAULT_VERSION: u32 = 41;
 
@@ -547,12 +546,22 @@ impl LimitRefreshInterval {
         Self::Hours5,
     ];
 
-    /// Claude answers frequent quota reads with HTTP 429, and OpenRouter
-    /// credits rarely move, so both poll slower than the rest.
+    /// Claude answers frequent quota reads with HTTP 429. OpenRouter and
+    /// DeepSeek account balances rarely move, while Qwen Code reads local
+    /// history, so these poll slower too.
     pub const fn default_for(driver: ProviderKind) -> Self {
         match driver {
             ProviderKind::Claude => Self::Minutes2,
-            ProviderKind::OpenRouter => Self::Minutes10,
+            ProviderKind::OpenRouter
+            | ProviderKind::DeepSeek
+            | ProviderKind::QwenCode
+            | ProviderKind::DeepSeekHarness
+            | ProviderKind::KimiCode
+            | ProviderKind::VolcengineArk
+            | ProviderKind::ZhipuGlm
+            | ProviderKind::MiniMaxCode
+            | ProviderKind::BaiduQianfan
+            | ProviderKind::TencentHunyuan => Self::Minutes10,
             _ => Self::Minute1,
         }
     }
@@ -791,6 +800,15 @@ pub enum ProviderKind {
     Grok,
     Kiro,
     CommandCode,
+    DeepSeek,
+    QwenCode,
+    DeepSeekHarness,
+    KimiCode,
+    VolcengineArk,
+    ZhipuGlm,
+    MiniMaxCode,
+    BaiduQianfan,
+    TencentHunyuan,
 }
 
 /// When the app backs off to leave CPU, GPU and network to a game.
@@ -966,7 +984,7 @@ fn new_id(prefix: &str) -> String {
 }
 
 impl ProviderKind {
-    pub const ALL: [Self; 10] = [
+    pub const ALL: [Self; 19] = [
         Self::Codex,
         Self::Claude,
         Self::Cursor,
@@ -977,6 +995,15 @@ impl ProviderKind {
         Self::Grok,
         Self::Kiro,
         Self::CommandCode,
+        Self::DeepSeek,
+        Self::QwenCode,
+        Self::DeepSeekHarness,
+        Self::KimiCode,
+        Self::VolcengineArk,
+        Self::ZhipuGlm,
+        Self::MiniMaxCode,
+        Self::BaiduQianfan,
+        Self::TencentHunyuan,
     ];
 
     pub const fn id(self) -> &'static str {
@@ -991,6 +1018,15 @@ impl ProviderKind {
             Self::Grok => "grok",
             Self::Kiro => "kiro",
             Self::CommandCode => "command-code",
+            Self::DeepSeek => "deepseek",
+            Self::QwenCode => "qwen-code",
+            Self::DeepSeekHarness => "deepseek-harness",
+            Self::KimiCode => "kimi-code",
+            Self::VolcengineArk => "volcengine-ark",
+            Self::ZhipuGlm => "zhipu-glm",
+            Self::MiniMaxCode => "minimax-code",
+            Self::BaiduQianfan => "baidu-qianfan",
+            Self::TencentHunyuan => "tencent-hunyuan",
         }
     }
 
@@ -1006,6 +1042,15 @@ impl ProviderKind {
             "grok" => Some(Self::Grok),
             "kiro" => Some(Self::Kiro),
             "command-code" => Some(Self::CommandCode),
+            "deepseek" => Some(Self::DeepSeek),
+            "qwen-code" => Some(Self::QwenCode),
+            "deepseek-harness" => Some(Self::DeepSeekHarness),
+            "kimi-code" => Some(Self::KimiCode),
+            "volcengine-ark" => Some(Self::VolcengineArk),
+            "zhipu-glm" => Some(Self::ZhipuGlm),
+            "minimax-code" => Some(Self::MiniMaxCode),
+            "baidu-qianfan" => Some(Self::BaiduQianfan),
+            "tencent-hunyuan" => Some(Self::TencentHunyuan),
             _ => None,
         }
     }
@@ -1022,6 +1067,15 @@ impl ProviderKind {
             Self::Grok => "Grok",
             Self::Kiro => "Kiro",
             Self::CommandCode => "Command Code",
+            Self::DeepSeek => "DeepSeek",
+            Self::QwenCode => "Qwen Code",
+            Self::DeepSeekHarness => "DeepSeek Harness",
+            Self::KimiCode => "Kimi Code",
+            Self::VolcengineArk => "Doubao / Ark",
+            Self::ZhipuGlm => "Zhipu GLM",
+            Self::MiniMaxCode => "MiniMax",
+            Self::BaiduQianfan => "Qianfan / ERNIE",
+            Self::TencentHunyuan => "Hunyuan / CodeBuddy",
         }
     }
 
@@ -1640,6 +1694,101 @@ impl Default for TrayFixedColor {
             red: 0,
             green: 120,
             blue: 212,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FloatingCircleColorMode {
+    /// Interpolate between user-selected colors as remaining quota changes.
+    #[default]
+    Gradient,
+    /// Keep every quota ring and value at one user-selected color.
+    Solid,
+}
+
+/// Colors shared by the floating circle's rings and percentage values.
+///
+/// The gradient deliberately has two adjacent 50% stops. This lets the
+/// warning range end in a warm color and the healthy range begin in blue
+/// without interpolating through green.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct FloatingCircleColors {
+    pub mode: FloatingCircleColorMode,
+    pub low: TrayFixedColor,
+    pub warning: TrayFixedColor,
+    pub safe: TrayFixedColor,
+    pub high: TrayFixedColor,
+    pub solid: TrayFixedColor,
+}
+
+/// One of the at most two compact floating-circle display slots.
+///
+/// An empty `provider_id` follows the first enabled provider. A slot always
+/// represents one provider account: Agents and CLI sessions contribute to
+/// usage statistics, but never stand in for an account's remaining quota.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct FloatingCircleSlot {
+    pub provider_id: String,
+}
+
+impl FloatingCircleSlot {
+    pub fn for_provider(provider: ProviderId) -> Self {
+        Self {
+            provider_id: provider.id().into(),
+        }
+    }
+
+    pub fn provider(&self) -> Option<ProviderId> {
+        (!self.provider_id.trim().is_empty())
+            .then(|| ProviderId::lookup(&self.provider_id))
+            .flatten()
+    }
+
+    fn normalize(&mut self) -> bool {
+        let provider = self.provider_id.trim().to_owned();
+        let changed = provider != self.provider_id;
+        self.provider_id = provider;
+        changed
+    }
+}
+
+fn default_floating_circle_slots() -> Vec<FloatingCircleSlot> {
+    vec![FloatingCircleSlot::default()]
+}
+
+impl Default for FloatingCircleColors {
+    fn default() -> Self {
+        Self {
+            mode: FloatingCircleColorMode::Gradient,
+            low: TrayFixedColor {
+                red: 255,
+                green: 103,
+                blue: 120,
+            },
+            warning: TrayFixedColor {
+                red: 252,
+                green: 225,
+                blue: 0,
+            },
+            safe: TrayFixedColor {
+                red: 68,
+                green: 134,
+                blue: 238,
+            },
+            high: TrayFixedColor {
+                red: 77,
+                green: 183,
+                blue: 255,
+            },
+            solid: TrayFixedColor {
+                red: 82,
+                green: 151,
+                blue: 246,
+            },
         }
     }
 }
@@ -2358,6 +2507,16 @@ pub struct Settings {
     pub popup_pinned: bool,
     /// Detached panel with a draggable header and top-anchored content.
     pub popup_floating: bool,
+    /// Compact always-on-top quota circle that remains available without the taskbar.
+    pub floating_circle_enabled: bool,
+    /// User-selected color behavior for floating quota rings and values.
+    pub floating_circle_colors: FloatingCircleColors,
+    /// Last dragged origin of the floating circle in physical screen pixels.
+    pub floating_circle_position: Option<PopupPosition>,
+    /// User-selected floating targets. One slot is always present and the
+    /// optional second slot is drawn directly below it.
+    #[serde(default = "default_floating_circle_slots")]
+    pub floating_circle_slots: Vec<FloatingCircleSlot>,
     /// User-selected popup height in DIPs, shared by tray and floating modes.
     pub popup_height_dip: Option<u32>,
     pub popup_position: Option<PopupPosition>,
@@ -2447,6 +2606,10 @@ impl Default for Settings {
             popup_pinned: !cfg!(windows),
             // Linux has no tray position to open beside.
             popup_floating: !cfg!(windows),
+            floating_circle_enabled: false,
+            floating_circle_colors: FloatingCircleColors::default(),
+            floating_circle_position: None,
+            floating_circle_slots: default_floating_circle_slots(),
             popup_height_dip: None,
             popup_position: None,
             popup_placement: if cfg!(windows) {
@@ -2462,7 +2625,11 @@ impl Default for Settings {
             notifications: NotificationSettings::default(),
             history_retention_days: 30,
             check_for_updates: true,
-            software_rendering: false,
+            // A lightweight utility does not benefit enough from a discrete
+            // GPU to justify third-party game overlays injecting into every
+            // window. WARP also gives us a stable fallback for damaged or
+            // temporarily unavailable graphics drivers.
+            software_rendering: cfg!(windows),
             game_mode: GameMode::default(),
             game_mode_games: Vec::new(),
             game_mode_ignored: Vec::new(),
@@ -2499,8 +2666,7 @@ impl Settings {
         if crate::fake::enabled() {
             return Ok(crate::fake::settings_path());
         }
-        let dirs = ProjectDirs::from("dev", "Codex Minibar", "Codex Minibar")
-            .context("could not resolve the application config directory")?;
+        let dirs = crate::app_identity::project_dirs()?;
         Ok(dirs.config_dir().join("settings.toml"))
     }
 
@@ -2732,6 +2898,17 @@ impl Settings {
             }
         }
         changed |= self.normalize_instances();
+        if self.floating_circle_slots.is_empty() {
+            self.floating_circle_slots = default_floating_circle_slots();
+            changed = true;
+        }
+        if self.floating_circle_slots.len() > 2 {
+            self.floating_circle_slots.truncate(2);
+            changed = true;
+        }
+        for slot in &mut self.floating_circle_slots {
+            changed |= slot.normalize();
+        }
         if self.version < SETTINGS_VERSION {
             self.version = SETTINGS_VERSION;
             changed = true;
@@ -2855,6 +3032,44 @@ impl Settings {
             .filter(|instance| instance.enabled)
             .map(ProviderInstance::provider_id)
             .collect()
+    }
+
+    /// Binds one of the two supported floating-circle slots to an account.
+    pub fn set_floating_circle_provider(&mut self, index: usize, provider: ProviderId) {
+        if index >= 2 {
+            return;
+        }
+        while self.floating_circle_slots.len() <= index {
+            self.floating_circle_slots
+                .push(FloatingCircleSlot::for_provider(provider));
+        }
+        self.floating_circle_slots[index] = FloatingCircleSlot::for_provider(provider);
+    }
+
+    /// Adds or removes the optional second circle. A new slot prefers another
+    /// enabled account, while still allowing two accounts of the same driver.
+    pub fn set_second_floating_circle(&mut self, enabled: bool) {
+        if !enabled {
+            self.floating_circle_slots.truncate(1);
+            return;
+        }
+        if self.floating_circle_slots.len() >= 2 {
+            return;
+        }
+        let enabled = self.enabled_providers();
+        let primary = self
+            .floating_circle_slots
+            .first()
+            .and_then(FloatingCircleSlot::provider)
+            .or_else(|| enabled.first().copied());
+        let provider = enabled
+            .into_iter()
+            .find(|provider| Some(*provider) != primary)
+            .or(primary);
+        if let Some(provider) = provider {
+            self.floating_circle_slots
+                .push(FloatingCircleSlot::for_provider(provider));
+        }
     }
 
     pub fn instance(&self, provider: ProviderId) -> Option<&ProviderInstance> {
@@ -3202,7 +3417,7 @@ fn startup_registration_present() -> Result<bool> {
         .encode_utf16()
         .chain(std::iter::once(0))
         .collect();
-    let value_name: Vec<u16> = "Codex Minibar"
+    let value_name: Vec<u16> = "Agent Minibar"
         .encode_utf16()
         .chain(std::iter::once(0))
         .collect();
@@ -3247,7 +3462,7 @@ fn apply_startup_registration(enabled: bool) -> Result<()> {
         .encode_utf16()
         .chain(std::iter::once(0))
         .collect();
-    let value_name: Vec<u16> = "Codex Minibar"
+    let value_name: Vec<u16> = "Agent Minibar"
         .encode_utf16()
         .chain(std::iter::once(0))
         .collect();
@@ -4065,6 +4280,152 @@ fn migrate(document: &mut toml::Value, mut version: u32) -> Result<()> {
                     .insert("version".into(), toml::Value::Integer(41));
                 version = 41;
             }
+            41 => {
+                // GPUI uses a DirectX swap chain on Windows. NVIDIA's game
+                // overlay can attach to that first presentation, show an
+                // Alt+Z prompt and occasionally leave a static window blank.
+                // Move existing Windows installs to WARP once; the Advanced
+                // setting remains available if a user prefers the GPU.
+                let root = document
+                    .as_table_mut()
+                    .context("settings root must be a TOML table")?;
+                root.insert(
+                    "software_rendering".into(),
+                    toml::Value::Boolean(cfg!(windows)),
+                );
+                root.insert("version".into(), toml::Value::Integer(42));
+                version = 42;
+            }
+            42 => {
+                // DeepSeek is a new built-in driver. Existing installations
+                // need its disabled primary instance added exactly once;
+                // normalization intentionally does not recreate instances a
+                // user explicitly deleted.
+                let root = document
+                    .as_table_mut()
+                    .context("settings root must be a TOML table")?;
+                let instances = root
+                    .entry("instances")
+                    .or_insert_with(|| toml::Value::Array(Vec::new()));
+                let instances = instances
+                    .as_array_mut()
+                    .context("settings instances must be a TOML array")?;
+                let has_deepseek = instances.iter().any(|instance| {
+                    instance.get("driver").and_then(toml::Value::as_str) == Some("deep_seek")
+                        || instance.get("driver").and_then(toml::Value::as_str) == Some("deepseek")
+                });
+                if !has_deepseek {
+                    instances.push(
+                        toml::Value::try_from(ProviderInstance::primary(ProviderKind::DeepSeek))
+                            .context("encode DeepSeek provider instance")?,
+                    );
+                }
+                root.insert("version".into(), toml::Value::Integer(43));
+                version = 43;
+            }
+            43 => {
+                // Qwen Code is a local-history driver. Existing installs get
+                // one disabled primary instance; a user-deleted instance is
+                // never recreated by later normalization.
+                let root = document
+                    .as_table_mut()
+                    .context("settings root must be a TOML table")?;
+                let instances = root
+                    .entry("instances")
+                    .or_insert_with(|| toml::Value::Array(Vec::new()));
+                let instances = instances
+                    .as_array_mut()
+                    .context("settings instances must be a TOML array")?;
+                let has_qwen_code = instances.iter().any(|instance| {
+                    matches!(
+                        instance.get("driver").and_then(toml::Value::as_str),
+                        Some("qwen_code" | "qwen-code")
+                    )
+                });
+                if !has_qwen_code {
+                    instances.push(
+                        toml::Value::try_from(ProviderInstance::primary(ProviderKind::QwenCode))
+                            .context("encode Qwen Code provider instance")?,
+                    );
+                }
+                root.insert("version".into(), toml::Value::Integer(44));
+                version = 44;
+            }
+            44 => {
+                // Domestic local-history drivers share one read-only scanner.
+                // Existing installs receive one disabled primary instance of
+                // each driver exactly once; normalization does not recreate a
+                // provider that a user removes later.
+                let root = document
+                    .as_table_mut()
+                    .context("settings root must be a TOML table")?;
+                let instances = root
+                    .entry("instances")
+                    .or_insert_with(|| toml::Value::Array(Vec::new()));
+                let instances = instances
+                    .as_array_mut()
+                    .context("settings instances must be a TOML array")?;
+                for provider in [
+                    ProviderKind::DeepSeekHarness,
+                    ProviderKind::KimiCode,
+                    ProviderKind::VolcengineArk,
+                    ProviderKind::ZhipuGlm,
+                    ProviderKind::MiniMaxCode,
+                    ProviderKind::BaiduQianfan,
+                    ProviderKind::TencentHunyuan,
+                ] {
+                    let already_present = instances.iter().any(|instance| {
+                        instance
+                            .get("driver")
+                            .and_then(toml::Value::as_str)
+                            .is_some_and(|driver| {
+                                driver == provider.id() || driver == provider.id().replace('-', "_")
+                            })
+                    });
+                    if !already_present {
+                        instances.push(
+                            toml::Value::try_from(ProviderInstance::primary(provider))
+                                .with_context(|| {
+                                    format!("encode {} provider instance", provider.display_name())
+                                })?,
+                        );
+                    }
+                }
+                root.insert("version".into(), toml::Value::Integer(45));
+                version = 45;
+            }
+            45 => {
+                let root = document
+                    .as_table_mut()
+                    .context("settings root must be a TOML table")?;
+                root.entry("floating_circle_slots").or_insert_with(|| {
+                    toml::Value::try_from(default_floating_circle_slots())
+                        .expect("default floating-circle slots encode")
+                });
+                root.insert("version".into(), toml::Value::Integer(46));
+                version = 46;
+            }
+            46 => {
+                // Floating circles are account quota surfaces. Older builds
+                // could bind one to a Harness Agent and render its share of
+                // local consumption as if it were a quota. Retire that
+                // selector without disturbing the chosen provider account.
+                let root = document
+                    .as_table_mut()
+                    .context("settings root must be a TOML table")?;
+                if let Some(slots) = root
+                    .get_mut("floating_circle_slots")
+                    .and_then(toml::Value::as_array_mut)
+                {
+                    for slot in slots {
+                        if let Some(slot) = slot.as_table_mut() {
+                            slot.remove("agent_id");
+                        }
+                    }
+                }
+                root.insert("version".into(), toml::Value::Integer(47));
+                version = 47;
+            }
             // Unknown future/gap versions: stamp current and keep decoding with
             // serde defaults rather than refusing to start.
             _ => {
@@ -4085,6 +4446,131 @@ fn migrate(document: &mut toml::Value, mut version: u32) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn v41_migration_selects_the_platform_safe_renderer() {
+        let mut document: toml::Value = toml::from_str(
+            r#"version = 41
+software_rendering = false
+"#,
+        )
+        .unwrap();
+
+        migrate(&mut document, 41).unwrap();
+
+        assert_eq!(
+            document
+                .get("software_rendering")
+                .and_then(toml::Value::as_bool),
+            Some(cfg!(windows))
+        );
+        assert_eq!(Settings::default().software_rendering, cfg!(windows));
+    }
+
+    #[test]
+    fn v42_migration_adds_disabled_deepseek_and_qwen_code_instances() {
+        let mut document: toml::Value = toml::from_str(
+            r#"version = 42
+instances = []
+"#,
+        )
+        .unwrap();
+
+        migrate(&mut document, 42).unwrap();
+        let instances = document
+            .get("instances")
+            .and_then(toml::Value::as_array)
+            .unwrap();
+        assert_eq!(instances.len(), 9);
+        assert_eq!(
+            instances[0].get("driver").and_then(toml::Value::as_str),
+            Some("deep_seek")
+        );
+        assert_eq!(
+            instances[0].get("enabled").and_then(toml::Value::as_bool),
+            Some(false)
+        );
+        assert_eq!(
+            instances[1].get("driver").and_then(toml::Value::as_str),
+            Some("qwen_code")
+        );
+        assert_eq!(
+            instances[1].get("enabled").and_then(toml::Value::as_bool),
+            Some(false)
+        );
+        assert_eq!(
+            document.get("version").and_then(toml::Value::as_integer),
+            Some(i64::from(SETTINGS_VERSION))
+        );
+    }
+
+    #[test]
+    fn v43_migration_adds_one_disabled_qwen_code_instance() {
+        let mut document: toml::Value = toml::from_str(
+            r#"version = 43
+instances = []
+"#,
+        )
+        .unwrap();
+
+        migrate(&mut document, 43).unwrap();
+        let instances = document
+            .get("instances")
+            .and_then(toml::Value::as_array)
+            .unwrap();
+        assert_eq!(instances.len(), 8);
+        assert_eq!(
+            instances[0].get("driver").and_then(toml::Value::as_str),
+            Some("qwen_code")
+        );
+        assert_eq!(
+            instances[0].get("enabled").and_then(toml::Value::as_bool),
+            Some(false)
+        );
+        assert_eq!(
+            document.get("version").and_then(toml::Value::as_integer),
+            Some(i64::from(SETTINGS_VERSION))
+        );
+    }
+
+    #[test]
+    fn v44_migration_adds_domestic_drivers_once_and_disabled() {
+        let mut document: toml::Value = toml::from_str(
+            r#"version = 44
+instances = []
+"#,
+        )
+        .unwrap();
+
+        migrate(&mut document, 44).unwrap();
+        let instances = document
+            .get("instances")
+            .and_then(toml::Value::as_array)
+            .unwrap();
+        assert_eq!(instances.len(), 7);
+        assert_eq!(
+            instances
+                .iter()
+                .filter_map(|instance| instance.get("driver")?.as_str())
+                .collect::<Vec<_>>(),
+            [
+                "deep_seek_harness",
+                "kimi_code",
+                "volcengine_ark",
+                "zhipu_glm",
+                "mini_max_code",
+                "baidu_qianfan",
+                "tencent_hunyuan",
+            ]
+        );
+        assert!(instances.iter().all(|instance| {
+            instance.get("enabled").and_then(toml::Value::as_bool) == Some(false)
+        }));
+        assert_eq!(
+            document.get("version").and_then(toml::Value::as_integer),
+            Some(i64::from(SETTINGS_VERSION))
+        );
+    }
 
     #[test]
     fn popup_placement_spots_stay_inside_the_work_area() {
@@ -4229,6 +4715,73 @@ mod tests {
         assert!(rewritten.contains("popup_background_material = \"acrylic\""));
         assert!(rewritten.contains("usage_refresh_interval = \"minutes15\""));
         assert!(rewritten.contains("usage_stats_enabled = true"));
+    }
+
+    #[test]
+    fn migrates_v45_settings_with_one_floating_circle_slot() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("settings.toml");
+        fs::write(&path, "version = 45\nfloating_circle_enabled = true\n").unwrap();
+
+        let loaded = Settings::load_or_create(&path).unwrap();
+
+        assert_eq!(loaded.version, SETTINGS_VERSION);
+        assert_eq!(loaded.floating_circle_slots.len(), 1);
+        assert!(loaded.floating_circle_slots[0].provider_id.is_empty());
+        assert!(
+            fs::read_to_string(path)
+                .unwrap()
+                .contains("floating_circle_slots")
+        );
+    }
+
+    #[test]
+    fn floating_circle_slots_are_trimmed_and_limited_to_two() {
+        let mut settings = Settings {
+            floating_circle_slots: vec![
+                FloatingCircleSlot {
+                    provider_id: " codex ".into(),
+                },
+                FloatingCircleSlot::for_provider(id(ProviderKind::DeepSeekHarness)),
+                FloatingCircleSlot::for_provider(id(ProviderKind::Claude)),
+            ],
+            ..Settings::default()
+        };
+
+        settings.repair_inplace();
+
+        assert_eq!(settings.floating_circle_slots.len(), 2);
+        assert_eq!(settings.floating_circle_slots[0].provider_id, "codex");
+    }
+
+    #[test]
+    fn v46_migration_retires_floating_agent_targets() {
+        let mut document: toml::Value = toml::from_str(
+            r#"version = 46
+[[floating_circle_slots]]
+provider_id = "deepseek-harness"
+agent_id = "root/child"
+"#,
+        )
+        .unwrap();
+
+        migrate(&mut document, 46).unwrap();
+
+        assert_eq!(
+            document.get("version").and_then(toml::Value::as_integer),
+            Some(i64::from(SETTINGS_VERSION))
+        );
+        let slot = document
+            .get("floating_circle_slots")
+            .and_then(toml::Value::as_array)
+            .and_then(|slots| slots.first())
+            .and_then(toml::Value::as_table)
+            .unwrap();
+        assert_eq!(
+            slot.get("provider_id").and_then(toml::Value::as_str),
+            Some("deepseek-harness")
+        );
+        assert!(!slot.contains_key("agent_id"));
     }
 
     #[test]
@@ -4692,9 +5245,19 @@ enabled = ["codex", "claude"]
         assert_eq!(settings.popup_floating, !cfg!(windows));
         assert!(settings.popup_position.is_none());
         assert_eq!(settings.popup_height_dip, None);
+        assert_eq!(
+            settings.floating_circle_colors,
+            FloatingCircleColors::default()
+        );
         settings.popup_height_dip = Some(900);
         settings.popup_floating = true;
         settings.popup_pinned = true;
+        settings.floating_circle_colors.mode = FloatingCircleColorMode::Solid;
+        settings.floating_circle_colors.solid = TrayFixedColor {
+            red: 0x12,
+            green: 0x34,
+            blue: 0x56,
+        };
         settings.popup_position = Some(PopupPosition {
             monitor: r"\\.\DISPLAY2".into(),
             x_dip: 140,
@@ -4779,11 +5342,18 @@ enabled = ["codex", "claude"]
     #[test]
     fn provider_drag_preserves_hidden_slots_for_every_membership_and_pair() {
         let original = Settings::default().provider_ids();
-        for mask in 0..(1_u32 << original.len()) {
+        let mut masks = vec![0, (1_u64 << original.len()) - 1];
+        for first in 0..original.len() {
+            masks.push(1_u64 << first);
+            for second in first + 1..original.len() {
+                masks.push((1_u64 << first) | (1_u64 << second));
+            }
+        }
+        for mask in masks {
             let visible: Vec<_> = original
                 .iter()
                 .enumerate()
-                .filter(|(index, _)| mask & (1 << index) != 0)
+                .filter(|(index, _)| mask & (1_u64 << index) != 0)
                 .map(|(_, provider)| *provider)
                 .collect();
             for from in &original {

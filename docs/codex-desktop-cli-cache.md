@@ -5,7 +5,7 @@ Desktop package versions are ordered numerically in both registry and WindowsApp
 discovery. Explicit CLI paths retain their existing priority.
 
 Before quota fallback, activation, account login, or troubleshooting launches the desktop CLI,
-Minibar prepares a copy under `%LOCALAPPDATA%/Codex Minibar/desktop-cli/<package>`.
+Minibar prepares a copy under `%LOCALAPPDATA%/Agent Minibar/desktop-cli/<package>`.
 Preparation is serialized. Copies are published from unique temporary files;
 an unsuccessful replacement never deletes the previous executable. A source
 size/modification-time stamp avoids repeated copies and detects same-sized updates.

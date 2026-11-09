@@ -1,4 +1,4 @@
-/* Interactive mockup of the real Codex Minibar popup.
+/* Interactive mockup of the real Agent Minibar popup.
    Layout, wording and metrics mirror src/popup_window/* so the site preview
    stays honest about what the app actually shows. */
 (() => {
@@ -14,7 +14,7 @@
     codex: {
       name: "Codex",
       plan: "Plus",
-      account: "vertopolkaLF",
+      account: "Truman-fan",
       icon: "assets/provider-chatgpt.svg",
       cls: "icon-codex",
       color: "#809fff",

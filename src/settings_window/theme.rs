@@ -22,9 +22,6 @@ pub(crate) struct Theme {
     pub(crate) dark: bool,
     pub(crate) font: SharedString,
     pub(crate) mono_font: SharedString,
-    /// Segoe glyph font for caption buttons; Linux draws Phosphor icons.
-    #[cfg_attr(not(windows), allow(dead_code))]
-    pub(crate) icon_font: SharedString,
     pub(crate) window_bg: Hsla,
     pub(crate) layer: Hsla,
     pub(crate) card: Hsla,
@@ -89,7 +86,6 @@ impl Default for Theme {
 pub(crate) struct Fonts {
     pub(crate) text: SharedString,
     pub(crate) mono: SharedString,
-    pub(crate) icons: SharedString,
 }
 
 impl Default for Fonts {
@@ -97,7 +93,6 @@ impl Default for Fonts {
         Self {
             text: "Segoe UI".into(),
             mono: "Consolas".into(),
-            icons: "Segoe MDL2 Assets".into(),
         }
     }
 }
@@ -114,10 +109,6 @@ impl Fonts {
         Self {
             text: crate::popup_window::ui::theme::default_font_family(cx),
             mono: monospace_family(pick(&["Cascadia Mono", "Consolas"], "Consolas")),
-            icons: pick(
-                &["Segoe Fluent Icons", "Segoe MDL2 Assets"],
-                "Segoe MDL2 Assets",
-            ),
         }
     }
 }
@@ -161,7 +152,6 @@ impl Theme {
             dark,
             font: fonts.text,
             mono_font: fonts.mono,
-            icon_font: fonts.icons,
             window_bg,
             // The content plane: one step up from the window, no stroke.
             layer: if dark {

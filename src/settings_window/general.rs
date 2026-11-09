@@ -68,7 +68,7 @@ impl SettingsWindow {
                 } else {
                     crate::i18n::tr("start-at-login")
                 },
-                Some(crate::i18n::tr("open-codex-minibar-in-the-tray-when-you-sign-in").into()),
+                Some(crate::i18n::tr("open-agent-minibar-in-the-tray-when-you-sign-in").into()),
                 start_at_login,
                 Self::h(cx, |this, value: bool, _, cx| {
                     this.edit(cx, move |settings| settings.start_at_login = value)

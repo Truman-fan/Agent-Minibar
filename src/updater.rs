@@ -22,19 +22,23 @@ use zip::ZipArchive;
 use crate::notifications;
 use crate::single_instance::release_for_update;
 
-pub const GITHUB_OWNER: &str = "vertopolkaLF";
-pub const GITHUB_REPO: &str = "codex-minibar";
-pub const RELEASES_URL: &str = "https://github.com/vertopolkaLF/codex-minibar/releases";
-pub const REPO_URL: &str = "https://github.com/vertopolkaLF/codex-minibar";
-pub const ISSUES_URL: &str = "https://github.com/vertopolkaLF/codex-minibar/issues";
+pub const GITHUB_OWNER: &str = "Truman-fan";
+pub const GITHUB_REPO: &str = "Agent-Minibar";
+pub const RELEASES_URL: &str = "https://github.com/Truman-fan/Agent-Minibar/releases";
+pub const REPO_URL: &str = "https://github.com/Truman-fan/Agent-Minibar";
+pub const ISSUES_URL: &str = "https://github.com/Truman-fan/Agent-Minibar/issues";
 pub const PROVIDER_REQUEST_ISSUE_URL: &str =
-    "https://github.com/vertopolkaLF/codex-minibar/issues/new?template=03-provider-request.yml";
-pub const CONTRIBUTING_URL: &str = "https://github.com/vertopolkaLF/codex-minibar#contributing";
+    "https://github.com/Truman-fan/Agent-Minibar/issues/new?template=03-provider-request.yml";
+pub const CONTRIBUTING_URL: &str = "https://github.com/Truman-fan/Agent-Minibar#contributing";
 
 const LATEST_RELEASE_API: &str =
-    "https://api.github.com/repos/vertopolkaLF/codex-minibar/releases/latest";
-const APP_EXE: &str = "codex-minibar.exe";
-const USER_AGENT: &str = "codex-minibar-updater";
+    "https://api.github.com/repos/Truman-fan/Agent-Minibar/releases/latest";
+const GITEE_LATEST_RELEASE_API: &str =
+    "https://gitee.com/api/v5/repos/Truman-fan/Agent-Minibar/releases/latest";
+const GITEE_RELEASES_URL: &str = "https://gitee.com/Truman-fan/Agent-Minibar/releases";
+const CHECKSUMS_NAME: &str = "SHA256SUMS";
+const APP_EXE: &str = "agent-minibar.exe";
+const USER_AGENT: &str = "agent-minibar-updater";
 const UPDATE_SUCCESS_MARKER: &str = ".update-success-pending";
 const UPDATE_STAGING_DIR: &str = ".update-staging";
 
@@ -193,7 +197,7 @@ fn megabytes(bytes: u64) -> String {
 pub(crate) fn report_download_started(version: &str) {
     notifications::show_update_progress(
         crate::i18n::tr("update-downloading"),
-        &format!("Codex Minibar {version}"),
+        &format!("Agent Minibar {version}"),
         notifications::Progress::Indeterminate,
     );
 }
@@ -307,7 +311,7 @@ fn sync_uninstall_display_version(version: &str) -> Result<()> {
     // Installer writes HKCU (RequestExecutionLevel user) for each arch package.
     for arch in ["x86", "x64", "arm64"] {
         let subkey =
-            format!(r"Software\Microsoft\Windows\CurrentVersion\Uninstall\Codex Minibar {arch}");
+            format!(r"Software\Microsoft\Windows\CurrentVersion\Uninstall\Agent Minibar {arch}");
         let subkey_w: Vec<u16> = subkey.encode_utf16().chain(std::iter::once(0)).collect();
         let mut key: HKEY = std::ptr::null_mut();
         let status = unsafe {
@@ -616,15 +620,30 @@ impl UpdateController {
     }
 }
 
-#[derive(Debug, Deserialize)]
-struct GhRelease {
+#[derive(Debug)]
+struct Release {
     tag_name: String,
     html_url: String,
-    assets: Vec<GhAsset>,
+    assets: Vec<ReleaseAsset>,
+}
+
+#[derive(Debug)]
+struct ReleaseAsset {
+    name: String,
+    download_url: String,
+    size: Option<u64>,
+    sha256: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
-struct GhAsset {
+struct GithubRelease {
+    tag_name: String,
+    html_url: String,
+    assets: Vec<GithubAsset>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GithubAsset {
     name: String,
     browser_download_url: String,
     #[serde(default)]
@@ -633,10 +652,27 @@ struct GhAsset {
     digest: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+struct GiteeRelease {
+    id: u64,
+    tag_name: String,
+    #[serde(default)]
+    html_url: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct GiteeAsset {
+    name: String,
+    browser_download_url: String,
+    #[serde(default)]
+    size: Option<u64>,
+}
+
 /// Hard upper bound for a downloaded release package.
 const MAX_UPDATE_DOWNLOAD_BYTES: u64 = 200 * 1024 * 1024;
 /// Upper bound for auxiliary downloads (e.g. the Stream Deck plugin).
 const MAX_AUX_DOWNLOAD_BYTES: u64 = 64 * 1024 * 1024;
+const MAX_CHECKSUMS_BYTES: u64 = 256 * 1024;
 
 /// Extracts the lowercase hex SHA-256 from a GitHub `digest` field.
 fn parse_sha256_digest(digest: &str) -> Option<String> {
@@ -673,12 +709,18 @@ pub fn host_arch() -> &'static str {
 }
 
 fn check_for_update() -> Result<Option<AvailableUpdate>> {
-    let release: GhRelease = github_get(LATEST_RELEASE_API)?;
+    let mut release = match github_release() {
+        Ok(release) => release,
+        Err(github_error) => gitee_release().with_context(|| {
+            format!("GitHub update source failed ({github_error:#}); Gitee fallback also failed")
+        })?,
+    };
     let remote = parse_release_version(&release.tag_name)?;
     let current = current_version();
     if remote <= current {
         return Ok(None);
     }
+    hydrate_release_checksums(&mut release)?;
 
     #[cfg(windows)]
     let update = portable_zip_update(&release, &remote)?;
@@ -688,7 +730,7 @@ fn check_for_update() -> Result<Option<AvailableUpdate>> {
 }
 
 #[cfg(windows)]
-fn portable_zip_update(release: &GhRelease, version: &Version) -> Result<AvailableUpdate> {
+fn portable_zip_update(release: &Release, version: &Version) -> Result<AvailableUpdate> {
     let arch = host_arch();
     let expected_suffix = format!("-{arch}-portable.zip");
     let asset = release
@@ -701,13 +743,20 @@ fn portable_zip_update(release: &GhRelease, version: &Version) -> Result<Availab
                 release.tag_name
             )
         })?;
+    if asset.sha256.is_none() {
+        bail!(
+            "release {} asset {} has no published SHA-256 checksum",
+            release.tag_name,
+            asset.name
+        );
+    }
     Ok(available_update(release, version, Some(asset)))
 }
 
 /// Without a matching asset the update is still announced, and installing it
 /// opens the release page.
 #[cfg(not(windows))]
-fn linux_update(release: &GhRelease, version: &Version) -> AvailableUpdate {
+fn linux_update(release: &Release, version: &Version) -> AvailableUpdate {
     let suffix = crate::linux::update::asset_suffix(host_arch());
     available_update(
         release,
@@ -719,31 +768,27 @@ fn linux_update(release: &GhRelease, version: &Version) -> AvailableUpdate {
 /// The asset to install on Linux. Installing replaces the running program, so
 /// an asset without a published checksum does not qualify.
 #[cfg(not(windows))]
-fn select_linux_asset<'a>(assets: &'a [GhAsset], suffix: Option<&str>) -> Option<&'a GhAsset> {
+fn select_linux_asset<'a>(
+    assets: &'a [ReleaseAsset],
+    suffix: Option<&str>,
+) -> Option<&'a ReleaseAsset> {
     let suffix = suffix?;
-    assets.iter().find(|asset| {
-        asset.name.ends_with(suffix)
-            && asset
-                .digest
-                .as_deref()
-                .and_then(parse_sha256_digest)
-                .is_some()
-    })
+    assets
+        .iter()
+        .find(|asset| asset.name.ends_with(suffix) && asset.sha256.is_some())
 }
 
 fn available_update(
-    release: &GhRelease,
+    release: &Release,
     version: &Version,
-    asset: Option<&GhAsset>,
+    asset: Option<&ReleaseAsset>,
 ) -> AvailableUpdate {
     AvailableUpdate {
         version: version.to_string(),
-        asset_url: asset.map_or_else(String::new, |asset| asset.browser_download_url.clone()),
+        asset_url: asset.map_or_else(String::new, |asset| asset.download_url.clone()),
         html_url: release.html_url.clone(),
         size: asset.and_then(|asset| asset.size),
-        sha256: asset
-            .and_then(|asset| asset.digest.as_deref())
-            .and_then(parse_sha256_digest),
+        sha256: asset.and_then(|asset| asset.sha256.clone()),
     }
 }
 
@@ -760,21 +805,122 @@ fn parse_release_version(tag: &str) -> Result<Version> {
     Version::parse(without_prefix).with_context(|| format!("parse release tag {tag:?}"))
 }
 
-fn github_get(url: &str) -> Result<GhRelease> {
+fn github_release() -> Result<Release> {
+    let release: GithubRelease =
+        api_get_json(LATEST_RELEASE_API, "application/vnd.github+json", "GitHub")?;
+    Ok(Release {
+        tag_name: release.tag_name,
+        html_url: release.html_url,
+        assets: release
+            .assets
+            .into_iter()
+            .map(|asset| ReleaseAsset {
+                name: asset.name,
+                download_url: asset.browser_download_url,
+                size: asset.size,
+                sha256: asset.digest.as_deref().and_then(parse_sha256_digest),
+            })
+            .collect(),
+    })
+}
+
+fn gitee_release() -> Result<Release> {
+    let release: GiteeRelease =
+        api_get_json(GITEE_LATEST_RELEASE_API, "application/json", "Gitee")?;
+    let assets_url = format!(
+        "https://gitee.com/api/v5/repos/Truman-fan/Agent-Minibar/releases/{}/attach_files",
+        release.id
+    );
+    let assets: Vec<GiteeAsset> = api_get_json(&assets_url, "application/json", "Gitee")?;
+    let html_url = if release.html_url.trim().is_empty() {
+        format!("{GITEE_RELEASES_URL}/tag/{}", release.tag_name)
+    } else {
+        release.html_url
+    };
+    Ok(Release {
+        tag_name: release.tag_name,
+        html_url,
+        assets: assets
+            .into_iter()
+            .map(|asset| ReleaseAsset {
+                name: asset.name,
+                download_url: asset.browser_download_url,
+                size: asset.size,
+                sha256: None,
+            })
+            .collect(),
+    })
+}
+
+fn hydrate_release_checksums(release: &mut Release) -> Result<()> {
+    if release.assets.iter().all(|asset| asset.sha256.is_some()) {
+        return Ok(());
+    }
+    let Some(checksums) = release
+        .assets
+        .iter()
+        .find(|asset| asset.name.eq_ignore_ascii_case(CHECKSUMS_NAME))
+    else {
+        return Ok(());
+    };
+    let body = http_get_text_limited(&checksums.download_url, MAX_CHECKSUMS_BYTES)?;
+    apply_release_checksums(release, &body);
+    Ok(())
+}
+
+fn apply_release_checksums(release: &mut Release, body: &str) {
+    for line in body.lines() {
+        let mut fields = line.split_whitespace();
+        let Some(hash) = fields.next() else { continue };
+        let Some(name) = fields.next() else { continue };
+        let name = name.trim_start_matches('*');
+        if hash.len() != 64 || !hash.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            continue;
+        }
+        if let Some(asset) = release.assets.iter_mut().find(|asset| asset.name == name) {
+            asset.sha256 = Some(hash.to_ascii_lowercase());
+        }
+    }
+}
+
+fn api_get_json<T: for<'de> Deserialize<'de>>(url: &str, accept: &str, service: &str) -> Result<T> {
+    let body = http_get_text(url, accept, service)?;
+    serde_json::from_str(&body).with_context(|| format!("parse {service} release response"))
+}
+
+fn http_get_text(url: &str, accept: &str, service: &str) -> Result<String> {
     let response = http_agent()
         .get(url)
         .set("User-Agent", USER_AGENT)
-        .set("Accept", "application/vnd.github+json")
+        .set("Accept", accept)
         .call()
         .with_context(|| format!("GET {url}"))?;
     let status = response.status();
     let body = response
         .into_string()
-        .with_context(|| format!("read GitHub response body ({status})"))?;
+        .with_context(|| format!("read {service} response body ({status})"))?;
     if status / 100 != 2 {
-        bail!("GitHub API returned {status}: {body}");
+        bail!("{service} API returned {status}: {body}");
     }
-    serde_json::from_str(&body).context("parse GitHub release JSON")
+    Ok(body)
+}
+
+fn http_get_text_limited(url: &str, limit: u64) -> Result<String> {
+    let response = http_agent()
+        .get(url)
+        .set("User-Agent", USER_AGENT)
+        .call()
+        .with_context(|| format!("GET {url}"))?;
+    let mut bytes = Vec::new();
+    response
+        .into_reader()
+        .take(limit + 1)
+        .read_to_end(&mut bytes)
+        .with_context(|| format!("read {url}"))?;
+    if bytes.len() as u64 > limit {
+        bail!("checksum manifest exceeds {limit} bytes");
+    }
+    String::from_utf8(bytes).context("checksum manifest is not UTF-8")
 }
 
 fn install_dir() -> Result<PathBuf> {
@@ -787,9 +933,13 @@ fn install_dir() -> Result<PathBuf> {
         })
 }
 
-/// Downloads the update's asset with progress on the update card, and verifies
-/// it against the published checksum if there is one.
+/// Downloads the update's asset with progress on the update card and verifies
+/// it against the required published checksum.
 pub(crate) fn download_package(update: &AvailableUpdate, destination: &Path) -> Result<()> {
+    let expected = update
+        .sha256
+        .as_deref()
+        .context("refusing to download an update without a published SHA-256 checksum")?;
     let limit = update.size.map_or(MAX_UPDATE_DOWNLOAD_BYTES, |size| {
         size.min(MAX_UPDATE_DOWNLOAD_BYTES)
     });
@@ -805,9 +955,7 @@ pub(crate) fn download_package(update: &AvailableUpdate, destination: &Path) -> 
             }
         },
     )?;
-    if let Some(expected) = &update.sha256
-        && !digest.eq_ignore_ascii_case(expected)
-    {
+    if !digest.eq_ignore_ascii_case(expected) {
         let _ = fs::remove_file(destination);
         bail!("update package checksum mismatch (expected {expected}, got {digest})");
     }
@@ -817,7 +965,7 @@ pub(crate) fn download_package(update: &AvailableUpdate, destination: &Path) -> 
 // Only reachable on Windows; see `apply_portable_zip`.
 #[cfg_attr(not(windows), allow(dead_code))]
 fn install_dir_writable(dir: &Path) -> bool {
-    let probe = dir.join(".codex-minibar-update-write-test");
+    let probe = dir.join(".agent-minibar-update-write-test");
     match fs::write(&probe, b"") {
         Ok(()) => {
             let _ = fs::remove_file(&probe);
@@ -888,7 +1036,7 @@ try {{
     }}
     Set-Content -LiteralPath (Join-Path $install '{marker}') -Value '{version}' -Encoding utf8 -NoNewline
     foreach ($arch in @('x86', 'x64', 'arm64')) {{
-        $key = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Codex Minibar $arch"
+        $key = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Agent Minibar $arch"
         if (Test-Path -LiteralPath $key) {{
             Set-ItemProperty -LiteralPath $key -Name DisplayVersion -Value '{version}'
         }}
@@ -1152,12 +1300,12 @@ mod tests {
     use super::*;
 
     #[cfg(not(windows))]
-    fn asset(name: &str, digest: Option<&str>) -> GhAsset {
-        GhAsset {
+    fn asset(name: &str, digest: Option<&str>) -> ReleaseAsset {
+        ReleaseAsset {
             name: name.into(),
-            browser_download_url: format!("https://example.test/{name}"),
+            download_url: format!("https://example.test/{name}"),
             size: Some(1),
-            digest: digest.map(str::to_owned),
+            sha256: digest.and_then(parse_sha256_digest),
         }
     }
 
@@ -1166,14 +1314,14 @@ mod tests {
     fn linux_asset_needs_the_suffix_and_a_checksum() {
         let digest = format!("sha256:{}", "a".repeat(64));
         let assets = [
-            asset("codex-minibar-2.0.0-x64-portable.zip", Some(&digest)),
-            asset("codex-minibar-2.0.0-linux-x64.tar.gz", None),
-            asset("codex-minibar-2.0.0-linux-x64.AppImage", Some(&digest)),
+            asset("agent-minibar-2.0.0-x64-portable.zip", Some(&digest)),
+            asset("agent-minibar-2.0.0-linux-x64.tar.gz", None),
+            asset("agent-minibar-2.0.0-linux-x64.AppImage", Some(&digest)),
         ];
         let select = |suffix| select_linux_asset(&assets, suffix).map(|a| a.name.as_str());
         assert_eq!(
             select(Some("-linux-x64.AppImage")),
-            Some("codex-minibar-2.0.0-linux-x64.AppImage")
+            Some("agent-minibar-2.0.0-linux-x64.AppImage")
         );
         assert_eq!(select(Some("-linux-x64.tar.gz")), None);
         assert_eq!(select(Some("-linux-arm64.AppImage")), None);
@@ -1183,7 +1331,7 @@ mod tests {
     #[cfg(not(windows))]
     #[test]
     fn a_linux_release_without_an_asset_falls_back_to_its_page() {
-        let release = GhRelease {
+        let release = Release {
             tag_name: "v2.0.0".into(),
             html_url: "https://example.test/release".into(),
             assets: Vec::new(),
@@ -1203,7 +1351,7 @@ mod tests {
             fs::create_dir_all(path.parent().unwrap()).unwrap();
             fs::write(path, b"").unwrap();
         };
-        touch("codex-minibar.exe");
+        touch("agent-minibar.exe");
         touch("Uninstall.exe");
         touch("Microsoft.ui.xaml.dll");
         touch("resources.pri");
@@ -1212,6 +1360,8 @@ mod tests {
         touch("ru-RU/Microsoft.UI.Xaml.Phone.dll.mui");
         touch("en-us/Microsoft.ui.xaml.dll.mui");
         touch("en-us/notes.txt");
+        touch("assets/icons/app-icon-64.png");
+        touch("assets/troubleshoot.ps1");
         touch("assets/app-icon.ico");
         touch("assets/icons/ph-bell-fill.svg");
         touch("assets/retired/old.svg");
@@ -1224,11 +1374,12 @@ mod tests {
         remove_update_staging(&dir.join(UPDATE_STAGING_DIR));
 
         for kept in [
-            "codex-minibar.exe",
+            "agent-minibar.exe",
             "Uninstall.exe",
             "en-us/Microsoft.ui.xaml.dll.mui",
             "en-us/notes.txt",
-            "assets/app-icon.ico",
+            "assets/icons/app-icon-64.png",
+            "assets/troubleshoot.ps1",
             &own,
         ] {
             assert!(dir.join(kept).exists(), "{kept} should be kept");
@@ -1238,6 +1389,7 @@ mod tests {
             "resources.pri",
             "Microsoft.UI.Xaml",
             "ru-RU",
+            "assets/app-icon.ico",
             "assets/icons/ph-bell-fill.svg",
             "assets/retired",
             ".update-staging/run-1",
@@ -1273,6 +1425,26 @@ mod tests {
         );
         assert_eq!(parse_sha256_digest("sha1:abc"), None);
         assert_eq!(parse_sha256_digest("sha256:zz"), None);
+    }
+
+    #[test]
+    fn applies_checksum_manifest_to_matching_assets() {
+        let hash = "a".repeat(64);
+        let mut release = Release {
+            tag_name: "v2.0.0".into(),
+            html_url: "https://example.test/release".into(),
+            assets: vec![ReleaseAsset {
+                name: "agent-minibar-2.0.0-x64-portable.zip".into(),
+                download_url: "https://example.test/package.zip".into(),
+                size: Some(1),
+                sha256: None,
+            }],
+        };
+        apply_release_checksums(
+            &mut release,
+            &format!("{hash} *agent-minibar-2.0.0-x64-portable.zip\n"),
+        );
+        assert_eq!(release.assets[0].sha256, Some(hash));
     }
 
     #[test]

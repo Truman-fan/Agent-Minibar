@@ -721,9 +721,10 @@ pub(crate) fn provider_tabs(ui: &UiState) -> Vec<PopupView> {
     provider_tab_views(&ui.instances, ui.popup_tab_mode)
 }
 
-/// Provider tabs are shown only when there is more than one to choose from.
+/// Keep every configured provider page reachable from the footer, including
+/// the common single-provider setup opened from a floating quota circle.
 pub(crate) fn show_provider_tabs(ui: &UiState) -> bool {
-    provider_tabs(ui).len() > 1
+    !provider_tabs(ui).is_empty()
 }
 
 /// The instance a grouped switcher shows: the persisted choice while it is

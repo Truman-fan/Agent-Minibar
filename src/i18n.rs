@@ -195,9 +195,10 @@ fn system_language() -> Language {
     }
 }
 
-/// Layout QA only: `CODEX_MINIBAR_PSEUDO_LOCALE=1` accents English copy and
+/// Layout QA only: `AGENT_MINIBAR_PSEUDO_LOCALE=1` accents English copy and
 /// makes it ~40% longer, like long translations such as Portuguese or German.
-const PSEUDO_LOCALE_ENV: &str = "CODEX_MINIBAR_PSEUDO_LOCALE";
+const PSEUDO_LOCALE_ENV: &str = "AGENT_MINIBAR_PSEUDO_LOCALE";
+const LEGACY_PSEUDO_LOCALE_ENV: &str = "CODEX_MINIBAR_PSEUDO_LOCALE";
 
 /// Transforms literal Fluent text only; placeables such as numbers stay intact.
 fn pseudo_localize(text: &str) -> std::borrow::Cow<'_, str> {
@@ -235,7 +236,12 @@ fn bundle(language: &str, source: &str) -> FluentBundle<FluentResource> {
     let mut bundle = FluentBundle::new(vec![language.parse().expect("supported locale")]);
     // Desktop labels do not need bidi isolation around numeric substitutions.
     bundle.set_use_isolating(false);
-    if language == "en" && std::env::var_os(PSEUDO_LOCALE_ENV).is_some_and(|value| value == "1") {
+    if language == "en"
+        && [PSEUDO_LOCALE_ENV, LEGACY_PSEUDO_LOCALE_ENV]
+            .into_iter()
+            .filter_map(std::env::var_os)
+            .any(|value| value == "1")
+    {
         bundle.set_transform(Some(pseudo_localize));
     }
     bundle
@@ -480,8 +486,8 @@ mod tests {
         assert_eq!(date_with_year_in(Language::Turkish, date), "8 Eki 2026");
         assert_eq!(tr_in(Language::Turkish, "settings"), "Ayarlar");
         assert_eq!(
-            tr_in(Language::Turkish, "codex-minibar-settings"),
-            "Codex Minibar Ayarları"
+            tr_in(Language::Turkish, "agent-minibar-settings"),
+            "Agent Minibar Ayarları"
         );
         for number in [0, 1, 2, 5, 21, 1_000_000] {
             assert_eq!(
@@ -817,30 +823,30 @@ mod tests {
             (
                 Language::BrazilianPortuguese,
                 "Configurações",
-                "Configurações do Codex Minibar",
+                "Configurações do Agent Minibar",
             ),
             (
                 Language::Spanish,
                 "Configuración",
-                "Configuración de Codex Minibar",
+                "Configuración de Agent Minibar",
             ),
-            (Language::SimplifiedChinese, "设置", "Codex Minibar 设置"),
-            (Language::TraditionalChinese, "設定", "Codex Minibar 設定"),
-            (Language::Japanese, "設定", "Codex Minibar の設定"),
-            (Language::Korean, "설정", "Codex Minibar 설정"),
+            (Language::SimplifiedChinese, "设置", "Agent Minibar 设置"),
+            (Language::TraditionalChinese, "設定", "Agent Minibar 設定"),
+            (Language::Japanese, "設定", "Agent Minibar の設定"),
+            (Language::Korean, "설정", "Agent Minibar 설정"),
             (
                 Language::German,
                 "Einstellungen",
-                "Codex Minibar – Einstellungen",
+                "Agent Minibar – Einstellungen",
             ),
             (
                 Language::French,
                 "Paramètres",
-                "Paramètres de Codex Minibar",
+                "Paramètres de Agent Minibar",
             ),
         ] {
             assert_eq!(tr_in(language, "settings"), label);
-            assert_eq!(tr_in(language, "codex-minibar-settings"), title);
+            assert_eq!(tr_in(language, "agent-minibar-settings"), title);
             assert_eq!(tr_in(language, "unknown-key"), "unknown-key");
         }
         assert_eq!(english("settings"), "Settings");

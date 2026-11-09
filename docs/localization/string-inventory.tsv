@@ -479,7 +479,7 @@ src/codex.rs	320	Codex app-server stdout unavailable
 src/codex.rs	338	initialize
 src/codex.rs	339	clientInfo
 src/codex.rs	339	name
-src/codex.rs	339	Codex Minibar
+src/codex.rs	339	Agent Minibar
 src/codex.rs	339	version
 src/codex.rs	339	CARGO_PKG_VERSION
 src/codex.rs	344	initialized
@@ -761,7 +761,7 @@ src/discovery.rs	157	OpenAI.Codex_
 src/discovery.rs	185	PackageRootFolder
 src/discovery.rs	199	app/resources/codex.exe
 src/discovery.rs	211	LOCALAPPDATA
-src/discovery.rs	213	Codex Minibar
+src/discovery.rs	213	Agent Minibar
 src/discovery.rs	214	desktop-cli
 src/discovery.rs	216	codex.exe
 src/discovery.rs	223	codex.exe.tmp
@@ -807,7 +807,7 @@ src/grok.rs	77	xai-grok-cli
 src/grok.rs	78	Accept
 src/grok.rs	78	application/json
 src/grok.rs	79	User-Agent
-src/grok.rs	79	Codex Minibar
+src/grok.rs	79	Agent Minibar
 src/grok.rs	84	Grok session is not authorized; run `grok login`
 src/grok.rs	88	Grok subscription quota request was rate limited (HTTP 429).
 src/grok.rs	92	Grok subscription quota request failed with HTTP {status}
@@ -868,8 +868,8 @@ src/instances.rs	349	Option::is_none
 src/instances.rs	480	OpenRouter
 src/instances.rs	513	{}-{timestamp:x}-{sequence:x}
 src/instances.rs	554	dev
-src/instances.rs	554	Codex Minibar
-src/instances.rs	554	Codex Minibar
+src/instances.rs	554	Agent Minibar
+src/instances.rs	554	Agent Minibar
 src/instances.rs	555	could not resolve the application data directory
 src/instances.rs	558	instances
 src/instances.rs	594	.claude
@@ -968,7 +968,7 @@ src/kiro.rs	735	Authorization
 src/kiro.rs	736	Accept
 src/kiro.rs	736	application/json
 src/kiro.rs	738	User-Agent
-src/kiro.rs	739	Codex Minibar/
+src/kiro.rs	739	Agent Minibar/
 src/kiro.rs	739	CARGO_PKG_VERSION
 src/kiro.rs	742	TokenType
 src/kiro.rs	742	EXTERNAL_IDP
@@ -1051,7 +1051,7 @@ src/limits.rs	395	available
 src/logger.rs	19	log.txt
 src/logger.rs	27	create log directory {}
 src/logger.rs	35	open {}
-src/logger.rs	37	Codex Minibar started
+src/logger.rs	37	Agent Minibar started
 src/logger.rs	38	Log file: {}
 src/logger.rs	46	archive {} as {}
 src/logger.rs	53	log path has no parent
@@ -1081,18 +1081,18 @@ src/main.rs	36	failed to apply startup registration: {error:#}
 src/main.rs	38	activation.toml
 src/main.rs	54	provider store lock poisoned
 src/main.rs	58	failed to hydrate provider store: {error:#}
-src/main.rs	125	Codex Minibar
+src/main.rs	125	Agent Minibar
 src/main.rs	140	{message}
-src/main.rs	148	Could not start Codex Minibar troubleshooting: {error:#}
-src/main.rs	159	Codex Minibar could not enforce a single instance: {error:#}
+src/main.rs	148	Could not start Agent Minibar troubleshooting: {error:#}
+src/main.rs	159	Agent Minibar could not enforce a single instance: {error:#}
 src/main.rs	166	could not clean abandoned Claude sign-in directories: {error:#}
 src/main.rs	169	could not clean abandoned Codex sign-in directories: {error:#}
-src/main.rs	175	Codex Minibar failed: {error:#}
-src/notifications.rs	9	dev.CodexMinibar
-src/notifications.rs	12	codex-minibar:update
+src/main.rs	175	Agent Minibar failed: {error:#}
+src/notifications.rs	9	io.github.trumanfan.AgentMinibar
+src/notifications.rs	12	agent-minibar:update
 src/notifications.rs	14	.toast-action
 src/notifications.rs	15	update_now
-src/notifications.rs	20	codex-minibar:update
+src/notifications.rs	20	agent-minibar:update
 src/notifications.rs	56	write {}
 src/notifications.rs	80	resolve current executable
 src/notifications.rs	84	executable has no parent directory
@@ -2228,8 +2228,8 @@ src/provider_registry.rs	451
 src/provider_registry.rs	460	{}.additional.
 src/provider_registry.rs	480	{}.additional.
 src/provider_registry.rs	572	 
-src/reset_feed.rs	24	https://raw.githubusercontent.com/vertopolkaLF/codex-minibar/main/data/codex-resets.json
-src/reset_feed.rs	27	codex-minibar-reset-feed
+src/reset_feed.rs	24	https://raw.githubusercontent.com/Truman-fan/Agent-Minibar/main/data/codex-resets.json
+src/reset_feed.rs	27	agent-minibar-reset-feed
 src/reset_feed.rs	76	default_schema_version
 src/reset_feed.rs	94	type
 src/reset_feed.rs	104	snake_case
@@ -2285,8 +2285,8 @@ src/secrets.rs	278	sk-or-
 src/secrets.rs	278	sk-
 src/secrets.rs	282	{prefix}…{tail}
 src/secrets.rs	300	dev
-src/secrets.rs	300	Codex Minibar
-src/secrets.rs	300	Codex Minibar
+src/secrets.rs	300	Agent Minibar
+src/secrets.rs	300	Agent Minibar
 src/secrets.rs	302	could not resolve the provider secrets directory
 src/secrets.rs	313	provider secret is too large
 src/secrets.rs	333	CryptProtectData failed: {}
@@ -2524,8 +2524,8 @@ src/settings.rs	1493	default_tray_presentation
 src/settings.rs	1534	unknown
 src/settings.rs	1697	default_show_usage_values
 src/settings.rs	1773	dev
-src/settings.rs	1773	Codex Minibar
-src/settings.rs	1773	Codex Minibar
+src/settings.rs	1773	Agent Minibar
+src/settings.rs	1773	Agent Minibar
 src/settings.rs	1774	could not resolve the application config directory
 src/settings.rs	1775	settings.toml
 src/settings.rs	1784	read {}
@@ -2559,9 +2559,9 @@ src/settings.rs	1992	session low usage threshold must be between 1 and 99 percen
 src/settings.rs	1996	weekly low usage threshold must be between 1 and 99 percent
 src/settings.rs	2261	reordered slot
 src/settings.rs	2379	Software\Microsoft\Windows\CurrentVersion\Run
-src/settings.rs	2383	Codex Minibar
+src/settings.rs	2383	Agent Minibar
 src/settings.rs	2424	Software\Microsoft\Windows\CurrentVersion\Run
-src/settings.rs	2428	Codex Minibar
+src/settings.rs	2428	Agent Minibar
 src/settings.rs	2448	open Windows startup registry key: {status}
 src/settings.rs	2453	resolve current executable for startup
 src/settings.rs	2454	"""{}"""
@@ -2823,7 +2823,7 @@ src/settings_window/about.rs	17	Update {} available
 src/settings_window/about.rs	18	Installing update…
 src/settings_window/about.rs	20	Couldn't check for updates
 src/settings_window/about.rs	33	color/app-icon.png
-src/settings_window/about.rs	39	Codex Minibar
+src/settings_window/about.rs	39	Agent Minibar
 src/settings_window/about.rs	54	Version {}
 src/settings_window/about.rs	62	Usage limits in the Windows tray.
 src/settings_window/about.rs	71	check-circle-fill
@@ -2959,7 +2959,7 @@ src/settings_window/advanced.rs	81	advanced-reset
 src/settings_window/advanced.rs	81	Reset
 src/settings_window/advanced.rs	91	Backup
 src/settings_window/advanced.rs	93	Data
-src/settings_window/advanced.rs	103	codex-minibar-settings.toml
+src/settings_window/advanced.rs	103	agent-minibar-settings.toml
 src/settings_window/advanced.rs	112	Settings exported.
 src/settings_window/advanced.rs	114	failed to export settings: {error:#}
 src/settings_window/advanced.rs	115	Settings export failed
@@ -3090,7 +3090,7 @@ src/settings_window/general.rs	27	45 minutes
 src/settings_window/general.rs	28	60 minutes
 src/settings_window/general.rs	49	general-startup
 src/settings_window/general.rs	50	Start with Windows
-src/settings_window/general.rs	51	Open Codex Minibar in the tray when you sign in.
+src/settings_window/general.rs	51	Open Agent Minibar in the tray when you sign in.
 src/settings_window/general.rs	59	general-limit-refresh
 src/settings_window/general.rs	60	Refresh limits
 src/settings_window/general.rs	61	How often provider quotas are read.
@@ -3867,7 +3867,7 @@ src/settings_window/tray.rs	162	Remaining
 src/settings_window/tray.rs	165	{metric} · {value} · {}
 src/settings_window/tray.rs	191	App icon
 src/settings_window/tray.rs	193	Widget {}
-src/settings_window/tray.rs	200	The Codex Minibar icon
+src/settings_window/tray.rs	200	The Agent Minibar icon
 src/settings_window/tray.rs	211	{style} · No indicators
 src/settings_window/tray.rs	213	{style} · {}
 src/settings_window/tray.rs	213	, 
@@ -3903,7 +3903,7 @@ src/settings_window/tray.rs	489	Remove
 src/settings_window/tray.rs	489	trash-fill
 src/settings_window/tray.rs	503	tray-row-{id}
 src/settings_window/tray.rs	507	caret-right
-src/settings_window/tray.rs	606	Shows the Codex Minibar icon in the notification area. It has no indicators to set up.
+src/settings_window/tray.rs	606	Shows the Agent Minibar icon in the notification area. It has no indicators to set up.
 src/settings_window/tray.rs	610	Style
 src/settings_window/tray.rs	614	A reset clock follows one quota.
 src/settings_window/tray.rs	617	Up to {MAX_INDICATORS} quotas, drawn in this order. Expand one to change it.
@@ -4024,16 +4024,16 @@ src/settings_window/window.rs	1346	failed to open {url}: {error:#}
 src/settings_window/window.rs	1353	failed to apply update: {error:#}
 src/settings_window/window.rs	1354	Update failed
 src/settings_window/window.rs	1354	{error:#}
-src/settings_window.rs	58	Codex Minibar Settings
-src/settings_window.rs	59	Welcome to Codex Minibar
-src/settings_window.rs	293	CodexMinibar
+src/settings_window.rs	58	Agent Minibar Settings
+src/settings_window.rs	59	Welcome to Agent Minibar
+src/settings_window.rs	293	AgentMinibar
 src/settings_window.rs	319	Could not open settings window: {error:#}
 src/settings_window.rs	320	Could not open settings window: {error:#}
 src/settings_window.rs	343	Could not open onboarding: {error:#}
 src/settings_window.rs	344	Could not open onboarding: {error:#}
-src/single_instance.rs	19	Local\CodexMinibar.9F89F5E9-770D-41AA-879F-9B15C12A2E6A
-src/single_instance.rs	20	Codex Minibar
-src/single_instance.rs	21	Codex Minibar Settings
+src/single_instance.rs	19	Local\AgentMinibar.9F89F5E9-770D-41AA-879F-9B15C12A2E6A
+src/single_instance.rs	20	Agent Minibar
+src/single_instance.rs	21	Agent Minibar Settings
 src/single_instance.rs	35	create single-instance mutex
 src/single_instance.rs	55	single-instance holder lock
 src/store/codex_accounts.rs	6	unattributed
@@ -4229,16 +4229,16 @@ src/store.rs	1539	DELETE FROM usage_events WHERE provider = ?1 AND path = ?2 AND
 src/store.rs	1609	unknown
 src/store.rs	1626	%Y-%m-%d
 src/store.rs	1644	dev
-src/store.rs	1644	Codex Minibar
-src/store.rs	1644	Codex Minibar
+src/store.rs	1644	Agent Minibar
+src/store.rs	1644	Agent Minibar
 src/store.rs	1646	could not resolve the application config directory
 src/store.rs	1650	provider-store.sqlite
 src/store.rs	1658	provider store lock poisoned
-src/streamdeck.rs	28	com.vertopolkalf.codex-minibar.streamDeckPlugin
-src/streamdeck.rs	29	https://raw.githubusercontent.com/vertopolkaLF/codex-minibar/main/data/com.vertopolkalf.codex-minibar.streamDeckPlugin
+src/streamdeck.rs	28	com.trumanshow.agent-minibar.streamDeckPlugin
+src/streamdeck.rs	29	https://raw.githubusercontent.com/Truman-fan/Agent-Minibar/main/data/com.trumanshow.agent-minibar.streamDeckPlugin
 src/streamdeck.rs	55	Stream Deck plugin
-src/streamdeck.rs	67	Codex Minibar
-src/streamdeck.rs	70	codex-minibar-streamdeck-{}-{stamp}-{PLUGIN_FILE_NAME}
+src/streamdeck.rs	67	Agent Minibar
+src/streamdeck.rs	70	agent-minibar-streamdeck-{}-{stamp}-{PLUGIN_FILE_NAME}
 src/streamdeck.rs	78	streamdeck-bridge.json
 src/streamdeck.rs	79	127.0.0.1
 src/streamdeck.rs	89	op
@@ -4263,11 +4263,11 @@ src/tray.rs	28	—
 src/tray.rs	33	5h  |  {}  |  {}\n7d  |  {}  |  {}
 src/tray.rs	41	{}  |  {}  |  {}
 src/tray.rs	47	\n
-src/tray.rs	71	Codex Minibar
+src/tray.rs	71	Agent Minibar
 src/tray.rs	86	{value}%
 src/tray.rs	87	?
 src/tray.rs	88	{} {value}
-src/tray.rs	101	Codex Minibar
+src/tray.rs	101	Agent Minibar
 src/tray.rs	106	{title}: {}
 src/tray.rs	106	, 
 src/tray.rs	108	\n
@@ -4294,14 +4294,14 @@ src/tray.rs	536	segoeuib.ttf
 src/tray.rs	537	arialbd.ttf
 src/tray.rs	541	/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf
 src/tray.rs	542	/System/Library/Fonts/Supplemental/Arial Bold.ttf
-src/tray.rs	658	Codex Minibar
+src/tray.rs	658	Agent Minibar
 src/tray.rs	665	create tray icon
-src/tray.rs	683	Codex Minibar
+src/tray.rs	683	Agent Minibar
 src/tray.rs	747	update
 src/tray.rs	748	settings
 src/tray.rs	749	exit
 src/tray.rs	780	create RGBA tray icon
-src/tray.rs	785	Codex Minibar - {}
+src/tray.rs	785	Agent Minibar - {}
 src/tray.rs	785	CARGO_PKG_VERSION
 src/tray.rs	790	settings
 src/tray.rs	790	Settings
@@ -4338,15 +4338,15 @@ src/troubleshoot.rs	147	assets/troubleshoot.ps1
 src/troubleshoot.rs	152	troubleshooting script was not found
 src/troubleshoot.rs	156	PATH
 src/updater.rs	21	vertopolkaLF
-src/updater.rs	22	codex-minibar
-src/updater.rs	23	https://github.com/vertopolkaLF/codex-minibar/releases
-src/updater.rs	24	https://github.com/vertopolkaLF/codex-minibar
-src/updater.rs	25	https://github.com/vertopolkaLF/codex-minibar/issues
-src/updater.rs	27	https://github.com/vertopolkaLF/codex-minibar/issues/new?template=03-provider-request.yml
-src/updater.rs	28	https://github.com/vertopolkaLF/codex-minibar#contributing
-src/updater.rs	31	https://api.github.com/repos/vertopolkaLF/codex-minibar/releases/latest
-src/updater.rs	32	codex-minibar.exe
-src/updater.rs	33	codex-minibar-updater
+src/updater.rs	22	agent-minibar
+src/updater.rs	23	https://github.com/Truman-fan/Agent-Minibar/releases
+src/updater.rs	24	https://github.com/Truman-fan/Agent-Minibar
+src/updater.rs	25	https://github.com/Truman-fan/Agent-Minibar/issues
+src/updater.rs	27	https://github.com/Truman-fan/Agent-Minibar/issues/new?template=03-provider-request.yml
+src/updater.rs	28	https://github.com/Truman-fan/Agent-Minibar#contributing
+src/updater.rs	31	https://api.github.com/repos/vertopolkaLF/agent-minibar/releases/latest
+src/updater.rs	32	agent-minibar.exe
+src/updater.rs	33	agent-minibar-updater
 src/updater.rs	34	.update-success-pending
 src/updater.rs	42	create native-tls connector
 src/updater.rs	71	update runtime is not installed
@@ -4358,7 +4358,7 @@ src/updater.rs	104	failed to sync installed display version: {error:#}
 src/updater.rs	119	x86
 src/updater.rs	119	x64
 src/updater.rs	119	arm64
-src/updater.rs	121	Software\Microsoft\Windows\CurrentVersion\Uninstall\Codex Minibar {arch}
+src/updater.rs	121	Software\Microsoft\Windows\CurrentVersion\Uninstall\Agent Minibar {arch}
 src/updater.rs	136	DisplayVersion
 src/updater.rs	153	RegSetValueExW(DisplayVersion) for {arch}: {status}
 src/updater.rs	165	read {}
@@ -4397,7 +4397,7 @@ src/updater.rs	372	GitHub API returned {status}: {body}
 src/updater.rs	374	parse GitHub release JSON
 src/updater.rs	379	resolve current executable
 src/updater.rs	383	executable has no parent directory
-src/updater.rs	388	.codex-minibar-update-write-test
+src/updater.rs	388	.agent-minibar-update-write-test
 src/updater.rs	403	cannot update in place because {} is not writable; opened the release page in your browser
 src/updater.rs	408	.update-staging
 src/updater.rs	409	run-{}
@@ -4407,7 +4407,7 @@ src/updater.rs	417	package.zip
 src/updater.rs	419	extracted
 src/updater.rs	420	create extraction directory
 src/updater.rs	424	apply-update.ps1
-src/updater.rs	426	"$ErrorActionPreference = 'Stop'\n$pidToWait = {pid}\n$install = '{install}'\n$source = '{source}'\n$staging = '{staging}'\n$exe = Join-Path $install '{APP_EXE}'\n\nwhile (Get-Process -Id $pidToWait -ErrorAction SilentlyContinue) {{\n    Start-Sleep -Milliseconds 250\n}}\n\ntry {{\n    Get-ChildItem -LiteralPath $source -Force | ForEach-Object {{\n        Copy-Item -LiteralPath $_.FullName -Destination $install -Recurse -Force\n    }}\n    Set-Content -LiteralPath (Join-Path $install '{marker}') -Value '{version}' -Encoding utf8 -NoNewline\n    foreach ($arch in @('x86', 'x64', 'arm64')) {{\n        $key = ""HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Codex Minibar $arch""\n        if (Test-Path -LiteralPath $key) {{\n            Set-ItemProperty -LiteralPath $key -Name DisplayVersion -Value '{version}'\n        }}\n    }}\n    Start-Process -FilePath $exe -WorkingDirectory $install\n}} finally {{\n    Start-Sleep -Seconds 2\n    if (Test-Path -LiteralPath $staging) {{\n        Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction SilentlyContinue\n    }}\n}}\n"
+src/updater.rs	426	"$ErrorActionPreference = 'Stop'\n$pidToWait = {pid}\n$install = '{install}'\n$source = '{source}'\n$staging = '{staging}'\n$exe = Join-Path $install '{APP_EXE}'\n\nwhile (Get-Process -Id $pidToWait -ErrorAction SilentlyContinue) {{\n    Start-Sleep -Milliseconds 250\n}}\n\ntry {{\n    Get-ChildItem -LiteralPath $source -Force | ForEach-Object {{\n        Copy-Item -LiteralPath $_.FullName -Destination $install -Recurse -Force\n    }}\n    Set-Content -LiteralPath (Join-Path $install '{marker}') -Value '{version}' -Encoding utf8 -NoNewline\n    foreach ($arch in @('x86', 'x64', 'arm64')) {{\n        $key = ""HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Agent Minibar $arch""\n        if (Test-Path -LiteralPath $key) {{\n            Set-ItemProperty -LiteralPath $key -Name DisplayVersion -Value '{version}'\n        }}\n    }}\n    Start-Process -FilePath $exe -WorkingDirectory $install\n}} finally {{\n    Start-Sleep -Seconds 2\n    if (Test-Path -LiteralPath $staging) {{\n        Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction SilentlyContinue\n    }}\n}}\n"
 src/updater.rs	462	write update helper script
 src/updater.rs	463	spawn update helper
 src/updater.rs	474	powershell

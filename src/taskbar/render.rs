@@ -30,7 +30,7 @@ use windows::{
 use windows_numerics::Vector2;
 
 use super::model::{Appearance, Icon, Rgb, Row, WidgetView};
-use crate::settings::TaskbarWidgetStyle;
+use crate::settings::{FloatingCircleColorMode, FloatingCircleColors, TaskbarWidgetStyle};
 
 /// Inset of the hover plate from the taskbar's long edges.
 const INSET: f32 = 4.0;
@@ -57,6 +57,38 @@ const PACE_OVERHANG: f32 = 2.5;
 /// Padding at both ends of a widget on a vertical taskbar.
 const PAD_VERTICAL: f32 = 6.0;
 const MAX_LABEL_CHARS: usize = 18;
+
+/// Native-window geometry for the compact always-on-top quota panel.
+pub(crate) const FLOATING_WIDTH: f32 = 96.0;
+pub(crate) const FLOATING_HEIGHT: f32 = 122.0;
+pub(crate) const FLOATING_RING_LEFT: f32 = 4.0;
+pub(crate) const FLOATING_RING_TOP: f32 = 0.0;
+pub(crate) const FLOATING_RING_DIAMETER: f32 = 88.0;
+pub(crate) const FLOATING_CARD_LEFT: f32 = 3.0;
+pub(crate) const FLOATING_CARD_TOP: f32 = 90.0;
+pub(crate) const FLOATING_CARD_WIDTH: f32 = 90.0;
+pub(crate) const FLOATING_CARD_HEIGHT: f32 = 30.0;
+pub(crate) const FLOATING_CARD_RADIUS: f32 = 5.0;
+
+const FLOATING_RING_CENTER_Y: f32 = 44.0;
+const FLOATING_OUTER_RADIUS: f32 = 35.0;
+const FLOATING_OUTER_STROKE: f32 = 7.0;
+const FLOATING_INNER_RADIUS: f32 = 24.0;
+const FLOATING_INNER_STROKE: f32 = 6.0;
+const FLOATING_SEPARATOR_RADIUS: f32 = 29.5;
+const FLOATING_SEPARATOR_STROKE: f32 = 1.5;
+const FLOATING_EMPTY_RADIUS: f32 = 38.0;
+const FLOATING_EMPTY_STROKE: f32 = 1.5;
+const FLOATING_ICON_SIZE: f32 = 24.0;
+const FLOATING_EMPTY_ICON_SIZE: f32 = 28.0;
+const FLOATING_STATUS_ALPHA: f32 = 0.78;
+const FLOATING_LABEL_BLUE: Rgb = [82, 151, 246];
+const FLOATING_LABEL_GREEN: Rgb = [70, 181, 96];
+// The always-on-top card cannot infer the page beneath it. A dark neutral
+// surface plus a light keyline stays legible across both white documents and
+// dark editors while the text itself retains the requested translucency.
+const FLOATING_CARD_SURFACE: Rgb = [24, 25, 28];
+const FLOATING_CARD_TEXT: Rgb = [246, 247, 250];
 
 /// Device geometry of the strip.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -179,6 +211,14 @@ struct Line {
     height: f32,
 }
 
+struct FloatingCell {
+    label: Line,
+    value: Line,
+    header: Rgb,
+    status: Rgb,
+    has_value: bool,
+}
+
 type Runs = Vec<(Line, Tone)>;
 
 /// A bar row's label, value and reset time.
@@ -242,6 +282,54 @@ fn truncate(label: &str) -> String {
         .to_owned();
     short.push('\u{2026}');
     short
+}
+
+fn truncate_floating_value(value: &str) -> String {
+    const MAX_VALUE_CHARS: usize = 13;
+    if value.chars().count() <= MAX_VALUE_CHARS {
+        return value.to_owned();
+    }
+    let mut short = value
+        .chars()
+        .take(MAX_VALUE_CHARS - 1)
+        .collect::<String>()
+        .trim_end()
+        .to_owned();
+    short.push('\u{2026}');
+    short
+}
+
+fn mix_rgb(from: Rgb, to: Rgb, amount: f32) -> Rgb {
+    let amount = amount.clamp(0.0, 1.0);
+    std::array::from_fn(|index| {
+        (f32::from(from[index]) + (f32::from(to[index]) - f32::from(from[index])) * amount).round()
+            as u8
+    })
+}
+
+/// Resolve the user-selected floating color. The warm and safe halves use
+/// separate gradients so crossing 50% never creates an unintended green.
+fn floating_status_color(colors: FloatingCircleColors, progress: f32) -> Rgb {
+    let rgb = |color: crate::settings::TrayFixedColor| [color.red, color.green, color.blue];
+    if colors.mode == FloatingCircleColorMode::Solid {
+        return rgb(colors.solid);
+    }
+    let progress = progress.clamp(0.0, 1.0);
+    if progress <= 0.50 {
+        mix_rgb(rgb(colors.low), rgb(colors.warning), progress / 0.50)
+    } else {
+        mix_rgb(rgb(colors.safe), rgb(colors.high), (progress - 0.50) / 0.50)
+    }
+}
+
+fn floating_label(row: &Row) -> String {
+    if row.label == crate::i18n::tr("short-5h") {
+        crate::i18n::tr("floating-circle-label-5h").to_owned()
+    } else if row.label == crate::i18n::tr("short-7d") {
+        crate::i18n::tr("floating-circle-label-1w").to_owned()
+    } else {
+        row.label.clone()
+    }
 }
 
 /// Point on a circle, `turn` of the way clockwise from twelve o'clock.
@@ -1220,6 +1308,422 @@ impl Renderer {
         result
     }
 
+    /// Paints the always-on-top quota panel: rings above a flat information card.
+    pub(crate) fn paint_floating_panel(
+        &mut self,
+        hdc: *mut core::ffi::c_void,
+        size: (i32, i32),
+        metrics: Metrics,
+        appearance: Appearance,
+        view: &WidgetView,
+        progress: &[Option<f32>],
+        colors: FloatingCircleColors,
+        hover: bool,
+        press: bool,
+    ) -> windows::core::Result<()> {
+        self.set_dpi(metrics.scale)?;
+        let result = self.paint_floating_panel_once(
+            hdc, size, metrics, appearance, view, progress, colors, hover, press,
+        );
+        if let Err(error) = &result
+            && error.code() == windows::Win32::Foundation::D2DERR_RECREATE_TARGET
+        {
+            self.recreate()?;
+            return self.paint_floating_panel_once(
+                hdc, size, metrics, appearance, view, progress, colors, hover, press,
+            );
+        }
+        result
+    }
+
+    fn floating_provider_icon(view: &WidgetView, appearance: Appearance) -> Option<Icon> {
+        let provider = view.provider?;
+        let descriptor = crate::provider_registry::descriptor(provider.kind());
+        let (red, green, blue) = if appearance.light {
+            crate::provider_registry::light_surface_brand_rgb(provider.kind())
+        } else {
+            crate::provider_registry::dark_surface_brand_rgb(provider.kind())
+        };
+        Some(Icon {
+            name: descriptor.icon,
+            badge: None,
+            tint: [red, green, blue],
+        })
+    }
+
+    fn draw_centered_text(
+        &self,
+        line: &Line,
+        bounds: D2D_RECT_F,
+        metrics: Metrics,
+        rgb: Rgb,
+        alpha: f32,
+    ) {
+        unsafe {
+            self.brush.SetColor(&color(rgb, alpha));
+            self.target.DrawTextLayout(
+                Vector2 {
+                    x: metrics.snap(bounds.left + (bounds.right - bounds.left - line.width) / 2.0),
+                    y: metrics.snap(bounds.top + (bounds.bottom - bounds.top - line.height) / 2.0),
+                },
+                &line.layout,
+                &self.brush,
+                D2D1_DRAW_TEXT_OPTIONS_NONE,
+            );
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn draw_floating_ring(
+        &self,
+        center: Vector2,
+        radius: f32,
+        stroke: f32,
+        fill: Option<f32>,
+        rgb: Rgb,
+        opacity: f32,
+    ) {
+        let circle = D2D1_ELLIPSE {
+            point: center,
+            radiusX: radius,
+            radiusY: radius,
+        };
+        unsafe {
+            // The panel is transparent and can cross light and dark content
+            // without the Windows theme changing. A dark keyline plus a light
+            // inner track keeps the complete ring legible on either surface.
+            self.brush.SetColor(&color([0, 0, 0], 0.42 * opacity));
+            self.target
+                .DrawEllipse(&circle, &self.brush, stroke + 2.0, &self.round);
+            self.brush.SetColor(&color([255, 255, 255], 0.36 * opacity));
+            self.target
+                .DrawEllipse(&circle, &self.brush, stroke, &self.round);
+            let Some(fill) = fill.map(|fill| fill.clamp(0.0, 1.0)) else {
+                return;
+            };
+            if fill <= 0.004 {
+                return;
+            }
+            self.brush
+                .SetColor(&color(rgb, FLOATING_STATUS_ALPHA * opacity));
+            if fill >= 0.999 {
+                self.target
+                    .DrawEllipse(&circle, &self.brush, stroke, &self.round);
+            } else if let Some(arc) = self.arc(center, radius, fill) {
+                self.target
+                    .DrawGeometry(&arc, &self.brush, stroke, &self.round);
+            }
+        }
+    }
+
+    fn paint_floating_panel_once(
+        &mut self,
+        hdc: *mut core::ffi::c_void,
+        size: (i32, i32),
+        metrics: Metrics,
+        appearance: Appearance,
+        view: &WidgetView,
+        progress: &[Option<f32>],
+        colors: FloatingCircleColors,
+        hover: bool,
+        press: bool,
+    ) -> windows::core::Result<()> {
+        let ring_progress: [Option<f32>; 2] = std::array::from_fn(|index| {
+            view.rows
+                .get(index)
+                .and_then(|row| progress.get(index).copied().flatten().or(row.progress))
+        });
+        let has_quota_rings = ring_progress.iter().any(Option::is_some);
+        let cells = if !has_quota_rings && let Some(state) = view.floating_card.as_ref() {
+            vec![FloatingCell {
+                label: self.line(&truncate(&state.label), 8.5, Weight::Semibold)?,
+                value: self.line(
+                    &truncate_floating_value(&state.value),
+                    10.5,
+                    Weight::Semibold,
+                )?,
+                header: state.color,
+                status: if state.tinted {
+                    state.color
+                } else {
+                    FLOATING_CARD_TEXT
+                },
+                has_value: state.tinted,
+            }]
+        } else {
+            view.rows
+                .iter()
+                .take(2)
+                .enumerate()
+                .map(|(index, row)| {
+                    let fill = ring_progress[index];
+                    Ok(FloatingCell {
+                        label: self.line(&truncate(&floating_label(row)), 8.5, Weight::Semibold)?,
+                        value: self.line(&row.value, 10.5, Weight::Semibold)?,
+                        header: if index == 0 {
+                            FLOATING_LABEL_BLUE
+                        } else {
+                            FLOATING_LABEL_GREEN
+                        },
+                        status: fill.map_or(FLOATING_CARD_TEXT, |fill| {
+                            floating_status_color(colors, fill)
+                        }),
+                        has_value: fill.is_some(),
+                    })
+                })
+                .collect::<windows::core::Result<Vec<_>>>()?
+        };
+        let bounds = RECT {
+            left: 0,
+            top: 0,
+            right: size.0,
+            bottom: size.1,
+        };
+        let center = Vector2 {
+            x: FLOATING_WIDTH / 2.0,
+            y: FLOATING_RING_CENTER_Y,
+        };
+        let hit_circle = D2D1_ELLIPSE {
+            point: center,
+            radiusX: FLOATING_RING_DIAMETER / 2.0,
+            radiusY: FLOATING_RING_DIAMETER / 2.0,
+        };
+        let card = D2D1_ROUNDED_RECT {
+            rect: rect(
+                FLOATING_CARD_LEFT,
+                FLOATING_CARD_TOP,
+                FLOATING_CARD_LEFT + FLOATING_CARD_WIDTH,
+                FLOATING_CARD_TOP + FLOATING_CARD_HEIGHT,
+            ),
+            radiusX: FLOATING_CARD_RADIUS,
+            radiusY: FLOATING_CARD_RADIUS,
+        };
+        let opacity = if press {
+            0.82
+        } else if hover {
+            1.0
+        } else {
+            0.94
+        };
+        let data_opacity = if view.floating_warning.is_some() {
+            opacity * 0.68
+        } else {
+            opacity
+        };
+        unsafe {
+            self.target.BindDC(HDC(hdc), &bounds).ok()?;
+            self.target.BeginDraw();
+            self.target.Clear(Some(&color([0, 0, 0], 0.0)));
+            // Layered windows let fully transparent pixels pass clicks through.
+            // A practically invisible alpha keeps the two visible islands draggable.
+            self.brush.SetColor(&color([255, 255, 255], 1.0 / 255.0));
+            self.target.FillEllipse(&hit_circle, &self.brush);
+            self.target.FillRoundedRectangle(&card, &self.brush);
+        }
+
+        if let Some(fill) = ring_progress[0] {
+            let status = floating_status_color(colors, fill);
+            self.draw_floating_ring(
+                center,
+                FLOATING_OUTER_RADIUS,
+                FLOATING_OUTER_STROKE,
+                Some(fill),
+                status,
+                data_opacity,
+            );
+        }
+        if let Some(fill) = ring_progress[1] {
+            let status = floating_status_color(colors, fill);
+            self.draw_floating_ring(
+                center,
+                FLOATING_INNER_RADIUS,
+                FLOATING_INNER_STROKE,
+                Some(fill),
+                status,
+                data_opacity,
+            );
+        }
+
+        unsafe {
+            if ring_progress.iter().all(Option::is_some) {
+                // Keep a complete neutral separator between the two quota
+                // rings. It has no progress state and remains visually
+                // distinct from either colored allowance.
+                let separator = D2D1_ELLIPSE {
+                    point: center,
+                    radiusX: FLOATING_SEPARATOR_RADIUS,
+                    radiusY: FLOATING_SEPARATOR_RADIUS,
+                };
+                self.brush.SetColor(&color([0, 0, 0], 0.42 * opacity));
+                self.target.DrawEllipse(
+                    &separator,
+                    &self.brush,
+                    FLOATING_SEPARATOR_STROKE + 1.5,
+                    None,
+                );
+                self.brush.SetColor(&color([255, 255, 255], 0.48 * opacity));
+                self.target
+                    .DrawEllipse(&separator, &self.brush, FLOATING_SEPARATOR_STROKE, None);
+            }
+
+            if !has_quota_rings {
+                // A provider without percentage quotas gets one neutral
+                // placeholder circle. Its outer edge exactly matches the
+                // keyed outer edge of the normal outer quota ring, keeping
+                // provider switches visually stable without faking progress.
+                let placeholder = D2D1_ELLIPSE {
+                    point: center,
+                    radiusX: FLOATING_EMPTY_RADIUS,
+                    radiusY: FLOATING_EMPTY_RADIUS,
+                };
+                self.brush.SetColor(&color([0, 0, 0], 0.42 * opacity));
+                self.target.DrawEllipse(
+                    &placeholder,
+                    &self.brush,
+                    FLOATING_EMPTY_STROKE + 1.5,
+                    None,
+                );
+                self.brush.SetColor(&color([255, 255, 255], 0.48 * opacity));
+                self.target
+                    .DrawEllipse(&placeholder, &self.brush, FLOATING_EMPTY_STROKE, None);
+            }
+        }
+
+        let icon_size = if has_quota_rings {
+            FLOATING_ICON_SIZE
+        } else {
+            FLOATING_EMPTY_ICON_SIZE
+        };
+        if let Some(icon) = Self::floating_provider_icon(view, appearance)
+            && let Some(bitmap) = self.icon_bitmap(&icon, icon_size)
+        {
+            let left = metrics.snap(center.x - icon_size / 2.0);
+            let top = metrics.snap(center.y - icon_size / 2.0);
+            let device = (icon_size * metrics.scale).round() / metrics.scale;
+            unsafe {
+                self.target.DrawBitmap(
+                    &bitmap,
+                    Some(&rect(left, top, left + device, top + device)),
+                    0.75 * opacity,
+                    D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
+                    None,
+                );
+            }
+        }
+
+        if let Some(warning) = view.floating_warning {
+            let outer = D2D1_ELLIPSE {
+                point: Vector2 {
+                    x: center.x + 30.0,
+                    y: center.y - 27.0,
+                },
+                radiusX: 5.0,
+                radiusY: 5.0,
+            };
+            let inner = D2D1_ELLIPSE {
+                point: outer.point,
+                radiusX: 3.5,
+                radiusY: 3.5,
+            };
+            unsafe {
+                self.brush.SetColor(&color([0, 0, 0], 0.72 * opacity));
+                self.target.FillEllipse(&outer, &self.brush);
+                self.brush.SetColor(&color(warning, 0.92 * opacity));
+                self.target.FillEllipse(&inner, &self.brush);
+            }
+        }
+
+        self.fill(&card, FLOATING_CARD_SURFACE, 0.88 * opacity);
+        let half = 0.5 / metrics.scale;
+        let edge = D2D1_ROUNDED_RECT {
+            rect: rect(
+                card.rect.left + half,
+                card.rect.top + half,
+                card.rect.right - half,
+                card.rect.bottom - half,
+            ),
+            radiusX: FLOATING_CARD_RADIUS - half,
+            radiusY: FLOATING_CARD_RADIUS - half,
+        };
+        unsafe {
+            // A paired dark/light keyline works independently of the content
+            // behind this layered window.
+            self.brush.SetColor(&color([0, 0, 0], 0.58 * opacity));
+            self.target
+                .DrawRoundedRectangle(&edge, &self.brush, half * 4.0, None);
+            self.brush.SetColor(&color([255, 255, 255], 0.24 * opacity));
+            self.target
+                .DrawRoundedRectangle(&edge, &self.brush, half * 2.0, None);
+        }
+
+        if !cells.is_empty() {
+            let count = cells.len() as f32;
+            let cell_width = FLOATING_CARD_WIDTH / count;
+            let header_top = FLOATING_CARD_TOP + 2.0;
+            let header_bottom = FLOATING_CARD_TOP + 12.5;
+            let header_width = if cells.len() == 1 { 44.0 } else { 30.0 };
+            let divider_alpha = 0.20;
+            for (index, cell) in cells.iter().enumerate() {
+                let left = FLOATING_CARD_LEFT + index as f32 * cell_width;
+                let right = left + cell_width;
+                let header_left = left + (cell_width - header_width) / 2.0;
+                let header = D2D1_ROUNDED_RECT {
+                    rect: rect(
+                        header_left,
+                        header_top,
+                        header_left + header_width,
+                        header_bottom,
+                    ),
+                    radiusX: 4.0,
+                    radiusY: 4.0,
+                };
+                self.fill(&header, cell.header, 0.62 * data_opacity);
+                self.draw_centered_text(
+                    &cell.label,
+                    header.rect,
+                    metrics,
+                    FLOATING_CARD_TEXT,
+                    0.72 * data_opacity,
+                );
+                self.draw_centered_text(
+                    &cell.value,
+                    rect(
+                        left + 1.0,
+                        header_bottom,
+                        right - 1.0,
+                        FLOATING_CARD_TOP + FLOATING_CARD_HEIGHT - 1.0,
+                    ),
+                    metrics,
+                    cell.status,
+                    if cell.has_value {
+                        FLOATING_STATUS_ALPHA * data_opacity
+                    } else {
+                        appearance.secondary_alpha() * data_opacity
+                    },
+                );
+            }
+            unsafe {
+                let one = 1.0 / metrics.scale;
+                self.brush
+                    .SetColor(&color([255, 255, 255], divider_alpha * opacity));
+                if cells.len() == 2 {
+                    let x = metrics.snap(FLOATING_CARD_LEFT + cell_width);
+                    self.target.FillRectangle(
+                        &rect(
+                            x - one / 2.0,
+                            FLOATING_CARD_TOP + 4.0,
+                            x + one / 2.0,
+                            FLOATING_CARD_TOP + FLOATING_CARD_HEIGHT - 4.0,
+                        ),
+                        &self.brush,
+                    );
+                }
+            }
+        }
+
+        unsafe { self.target.EndDraw(None, None).ok() }
+    }
+
     fn paint_once(
         &mut self,
         hdc: *mut core::ffi::c_void,
@@ -2093,5 +2597,52 @@ pub(crate) fn snapshot(
             height: height as u32,
             rgba,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn floating_status_scale_distinguishes_nearby_midrange_values() {
+        let colors = FloatingCircleColors::default();
+        let forty_one = floating_status_color(colors, 0.41);
+        let forty_eight = floating_status_color(colors, 0.48);
+        assert_ne!(forty_one, forty_eight);
+        assert!(forty_one[1] < forty_eight[1]);
+        assert_eq!(floating_status_color(colors, 0.0), [255, 103, 120]);
+        assert_eq!(floating_status_color(colors, 0.50), [252, 225, 0]);
+        let fifty_one = floating_status_color(colors, 0.51);
+        assert!(fifty_one[2] > fifty_one[0]);
+        assert!(fifty_one[2] > fifty_one[1]);
+        assert_eq!(floating_status_color(colors, 1.0), [77, 183, 255]);
+
+        let solid = FloatingCircleColors {
+            mode: FloatingCircleColorMode::Solid,
+            ..colors
+        };
+        assert_eq!(floating_status_color(solid, 0.0), [82, 151, 246]);
+        assert_eq!(floating_status_color(solid, 1.0), [82, 151, 246]);
+    }
+
+    #[test]
+    fn floating_panel_geometry_keeps_each_layer_separate() {
+        const {
+            let inner_ring_edge = FLOATING_INNER_RADIUS + FLOATING_INNER_STROKE / 2.0;
+            let separator_half_stroke = (FLOATING_SEPARATOR_STROKE + 1.5) / 2.0;
+            let outer_ring_inner_edge = FLOATING_OUTER_RADIUS - FLOATING_OUTER_STROKE / 2.0;
+            assert!(inner_ring_edge < FLOATING_SEPARATOR_RADIUS - separator_half_stroke);
+            assert!(FLOATING_SEPARATOR_RADIUS + separator_half_stroke < outer_ring_inner_edge);
+            assert!(FLOATING_ICON_SIZE / 2.0 < FLOATING_INNER_RADIUS - FLOATING_INNER_STROKE / 2.0);
+            assert!(FLOATING_EMPTY_ICON_SIZE / 2.0 < FLOATING_EMPTY_RADIUS);
+            let quota_keyline_edge = FLOATING_OUTER_RADIUS + (FLOATING_OUTER_STROKE + 2.0) / 2.0;
+            let empty_keyline_edge = FLOATING_EMPTY_RADIUS + (FLOATING_EMPTY_STROKE + 1.5) / 2.0;
+            assert!(quota_keyline_edge == empty_keyline_edge);
+            let rings_bottom = FLOATING_RING_CENTER_Y + quota_keyline_edge;
+            assert!(rings_bottom < FLOATING_CARD_TOP);
+            assert!(FLOATING_RING_DIAMETER / 2.0 > quota_keyline_edge);
+            assert!(FLOATING_CARD_TOP + FLOATING_CARD_HEIGHT <= FLOATING_HEIGHT);
+        }
     }
 }

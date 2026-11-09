@@ -7,7 +7,7 @@ on:
     branches: [main]
     paths:
       - "cmdpal/**"
-      - "data/CodexMinibar.CommandPalette_*.msix"
+      - "data/AgentMinibar.CommandPalette_*.msix"
       - ".github/workflows/cmdpal.yml"
   workflow_dispatch:
     inputs:
@@ -39,13 +39,13 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          [xml]$manifest = Get-Content -Raw "cmdpal/CodexMinibar.CommandPalette/Package.appxmanifest"
+          [xml]$manifest = Get-Content -Raw "cmdpal/AgentMinibar.CommandPalette/Package.appxmanifest"
           $version = $manifest.Package.Identity.Version
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           Write-Host "Source extension version: $version"
           $changed = $env:FORCE -eq "true"
           foreach ($arch in "x64", "arm64") {
-            $packed = "data/CodexMinibar.CommandPalette_$arch.msix"
+            $packed = "data/AgentMinibar.CommandPalette_$arch.msix"
             $packedVersion = ""
             if (Test-Path -LiteralPath $packed) {
               $zip = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $packed))
@@ -73,7 +73,7 @@ jobs:
       - name: Build MSIX packages
         if: steps.check.outputs.changed == 'true'
         shell: pwsh
-        working-directory: cmdpal/CodexMinibar.CommandPalette
+        working-directory: cmdpal/AgentMinibar.CommandPalette
         run: |
           $ErrorActionPreference = "Stop"
           foreach ($platform in "x64", "ARM64") {
@@ -91,12 +91,12 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           foreach ($arch in "x64", "arm64") {
-            $built = Get-ChildItem -Path cmdpal/dist -Recurse -Filter "CodexMinibar.CommandPalette_$($env:VERSION)_$arch.msix" |
+            $built = Get-ChildItem -Path cmdpal/dist -Recurse -Filter "AgentMinibar.CommandPalette_$($env:VERSION)_$arch.msix" |
               Select-Object -First 1
             if (-not $built) {
               throw "MSIX for $arch was not created under cmdpal/dist"
             }
-            Copy-Item -LiteralPath $built.FullName -Destination "data/CodexMinibar.CommandPalette_$arch.msix" -Force
+            Copy-Item -LiteralPath $built.FullName -Destination "data/AgentMinibar.CommandPalette_$arch.msix" -Force
             Write-Host "Staged $($built.Name)"
           }
 
@@ -108,7 +108,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/CodexMinibar.CommandPalette_*.msix
+          git add data/AgentMinibar.CommandPalette_*.msix
           if git diff --cached --quiet -- data; then
             echo "Packaged extension is already committed"
             exit 0

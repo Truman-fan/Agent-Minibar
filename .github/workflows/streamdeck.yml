@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - "streamdeck/**"
-      - "data/com.vertopolkalf.codex-minibar.streamDeckPlugin"
+      - "data/com.trumanshow.agent-minibar.streamDeckPlugin"
       - ".github/workflows/streamdeck.yml"
   workflow_dispatch:
 
@@ -29,12 +29,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          src_file="streamdeck/com.vertopolkalf.codex-minibar.sdPlugin/manifest.json"
-          packed_file="data/com.vertopolkalf.codex-minibar.streamDeckPlugin"
+          src_file="streamdeck/com.trumanshow.agent-minibar.sdPlugin/manifest.json"
+          packed_file="data/com.trumanshow.agent-minibar.streamDeckPlugin"
           src_version=$(jq -r '.Version' "$src_file")
           packed_version=""
           if [[ -f "$packed_file" ]]; then
-            packed_version=$(unzip -p "$packed_file" "com.vertopolkalf.codex-minibar.sdPlugin/manifest.json" | jq -r '.Version')
+            packed_version=$(unzip -p "$packed_file" "com.trumanshow.agent-minibar.sdPlugin/manifest.json" | jq -r '.Version')
           fi
           echo "Source plugin version: $src_version"
           echo "Packaged plugin version: ${packed_version:-<missing>}"
@@ -70,8 +70,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/com.vertopolkalf.codex-minibar.streamDeckPlugin
-          if git diff --cached --quiet -- data/com.vertopolkalf.codex-minibar.streamDeckPlugin; then
+          git add data/com.trumanshow.agent-minibar.streamDeckPlugin
+          if git diff --cached --quiet -- data/com.trumanshow.agent-minibar.streamDeckPlugin; then
             echo "Packed plugin is already committed"
             exit 0
           fi

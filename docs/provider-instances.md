@@ -54,7 +54,7 @@ source = { kind = "config_folder", path = "" }   # or { kind = "manual" }
 
 - **Config folder** (default, full feature set). Empty path = standard folder
   (`~/.claude` with Claude Desktop session fallback, `~/.codex`). Non-first
-  instances without a path get `%LOCALAPPDATA%\Codex Minibar\instances\<id>\`.
+  instances without a path get `%LOCALAPPDATA%\Agent Minibar\instances\<id>\`.
   Credentials are read from the folder and never written back by Minibar.
   **Sign in** runs `claude /login` / `codex login` with the instance folder as
   `CLAUDE_CONFIG_DIR` / `CODEX_HOME`.

@@ -21,13 +21,13 @@ use tar::{Archive, EntryType};
 
 use crate::updater::{self, AvailableUpdate};
 
-const BINARY: &str = "codex-minibar";
+const BINARY: &str = "agent-minibar";
 /// Installed only by the release tarball's layout (`install_tree` in
 /// `build-linux.sh`), so it tells a tarball prefix from any other `bin/`.
-const TARBALL_MARKER: &str = "share/doc/codex-minibar/LICENSE";
+const TARBALL_MARKER: &str = "share/doc/agent-minibar/LICENSE";
 /// Staging directories beside the installed program. They vanish on their own
 /// unless the process is killed mid-update.
-const STAGING_PREFIX: &str = ".codex-minibar-update-";
+const STAGING_PREFIX: &str = ".agent-minibar-update-";
 /// Waits for this process to exit, because a new instance started earlier
 /// would hand over to it and quit. Bounded: a parent that never reaps this
 /// process leaves a zombie that `kill -0` still finds.
@@ -404,7 +404,7 @@ mod tests {
         touch(&build, "program");
         assert_eq!(detect(None, None, &build), InstallKind::Unmanaged);
         assert_eq!(
-            detect(None, None, Path::new("/usr/bin/codex-minibar")),
+            detect(None, None, Path::new("/usr/bin/agent-minibar")),
             InstallKind::Unmanaged
         );
     }
@@ -457,15 +457,15 @@ mod tests {
         write_tarball(&archive, |builder| {
             append(
                 builder,
-                "codex-minibar-2.0.0/bin/codex-minibar",
+                "agent-minibar-2.0.0/bin/agent-minibar",
                 "new program",
             );
             append(
                 builder,
-                "codex-minibar-2.0.0/share/applications/a.desktop",
+                "agent-minibar-2.0.0/share/applications/a.desktop",
                 "entry",
             );
-            append(builder, "codex-minibar-2.0.0/install.sh", "#!/bin/sh");
+            append(builder, "agent-minibar-2.0.0/install.sh", "#!/bin/sh");
         });
 
         let root = unpack_tarball(&archive, &dir.path().join("extracted")).unwrap();
@@ -489,7 +489,7 @@ mod tests {
         let archive = dir.path().join("package.tar.gz");
         write_tarball(&archive, |builder| append(builder, "root/notes.txt", "x"));
         let error = unpack_tarball(&archive, &dir.path().join("extracted")).unwrap_err();
-        assert!(error.to_string().contains("no codex-minibar program"));
+        assert!(error.to_string().contains("no agent-minibar program"));
     }
 
     #[test]
@@ -497,8 +497,8 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let archive = dir.path().join("package.tar.gz");
         write_tarball(&archive, |builder| {
-            append(builder, "one/bin/codex-minibar", "x");
-            append(builder, "two/bin/codex-minibar", "x");
+            append(builder, "one/bin/agent-minibar", "x");
+            append(builder, "two/bin/agent-minibar", "x");
         });
         let error = unpack_tarball(&archive, &dir.path().join("extracted")).unwrap_err();
         assert!(error.to_string().contains("single root"));

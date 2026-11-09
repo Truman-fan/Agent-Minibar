@@ -1,13 +1,14 @@
 [package]
-name = "codex-minibar"
-version = "1.5.2"
+name = "agent-minibar"
+version = "1.6.0"
 edition = "2024"
-description = "Windows and Linux tray companion for monitoring AI tools usage"
+authors = ["Truman_show"]
+description = "Windows and Linux floating quota companion for AI agents and providers"
 license = "Apache-2.0"
-repository = "https://github.com/vertopolkaLF/codex-minibar"
-homepage = "https://github.com/vertopolkaLF/codex-minibar"
+repository = "https://github.com/Truman-fan/Agent-Minibar"
+homepage = "https://github.com/Truman-fan/Agent-Minibar"
 readme = "README.md"
-keywords = ["codex", "windows", "linux", "tray", "usage"]
+keywords = ["agents", "windows", "linux", "tray", "usage"]
 categories = ["command-line-utilities", "gui"]
 
 [dependencies]
@@ -19,10 +20,10 @@ csv = "1"
 directories = "6"
 font8x8 = "0.3"
 fontdue = "0.9"
-# Same versions GPUI uses: Open VSX logos are decoded and shrunk before
-# they reach GPUI, whose asset cache would keep them at full size.
-image = "0.25"
-png = "0.17"
+# Open VSX/release artwork only accepts common web and icon formats. Avoid
+# pulling professional/raw image codecs into the desktop executable.
+image = { version = "0.25", default-features = false, features = ["gif", "ico", "jpeg", "png", "webp"] }
+png = "0.18"
 # Release summaries ("What's new") are fetched as Markdown.
 pulldown-cmark = { version = "0.13", default-features = false }
 semver = "1"
@@ -33,8 +34,11 @@ toml = "0.9"
 tempfile = "3"
 ureq = { version = "2", default-features = false, features = ["tls", "native-tls"] }
 rusqlite = { version = "0.37", features = ["bundled"] }
-zip = "2"
+# GitHub release archives and VSIX packages use Stored/Deflate entries. The
+# default feature set also links encryption and five unused compression stacks.
+zip = { version = "2", default-features = false, features = ["deflate"] }
 zeroize = "1"
+zstd = { version = "0.13", default-features = false }
 # windows-rs is pinned to one commit so windows-core, windows and
 # windows-numerics always resolve to matching versions.
 windows-core = { git = "https://github.com/microsoft/windows-rs", rev = "07f344c019b8fdae4d398d4c2591596044cb416a" }
@@ -115,7 +119,7 @@ rustybuzz = { opt-level = 3 }
 ttf-parser = { opt-level = 3 }
 
 # GPUI 0.2.2 with its Windows blend state fixed to composite alpha (see the
-# `codex-minibar patch` note in vendor/gpui's directx_renderer.rs).
+# `agent-minibar patch` note in vendor/gpui's directx_renderer.rs).
 # Translucent windows otherwise draw anti-aliased edges as gray hairlines.
 [patch.crates-io]
 gpui = { path = "vendor/gpui" }

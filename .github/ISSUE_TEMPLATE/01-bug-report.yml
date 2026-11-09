@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for reporting a problem with Codex Minibar.
+        Thanks for reporting a problem with Agent Minibar.
 
         Please do **not** paste API keys, tokens, credentials, or raw usage history.
 
@@ -51,7 +51,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Codex Minibar version
+      label: Agent Minibar version
       description: Shown in Settings → About & Updates.
       placeholder: "0.4.9"
     validations:

@@ -292,6 +292,7 @@ fn open_windows_host(
         is_movable: false,
         is_resizable: false,
         is_minimizable: false,
+        has_native_caption_buttons: false,
         display_id: None,
         // Never enable HWND-wide Acrylic: it ignores the capsule's
         // region. A separate clipped composition visual supplies blur.

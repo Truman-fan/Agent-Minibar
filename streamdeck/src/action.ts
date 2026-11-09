@@ -198,7 +198,7 @@ async function runClickAction(action: KeyAction<ActionSettings>, settings: Actio
   }
 }
 
-@action({ UUID: "com.vertopolkalf.codex-minibar.quota-indicator" })
+@action({ UUID: "com.trumanshow.agent-minibar.quota-indicator" })
 export class QuotaIndicator extends SingletonAction<ActionSettings> {
   override async onSendToPlugin(ev: SendToPluginEvent<import("@elgato/utils").JsonValue, ActionSettings>): Promise<void> {
     if (!ev.payload || typeof ev.payload !== "object" || !("op" in ev.payload) || ev.payload.op !== "catalog") return;

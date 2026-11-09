@@ -1,6 +1,6 @@
 //! "Start at login" through an XDG autostart entry.
 //!
-//! `$XDG_CONFIG_HOME/autostart/codex-minibar.desktop` is honored by GNOME,
+//! `$XDG_CONFIG_HOME/autostart/agent-minibar.desktop` is honored by GNOME,
 //! KDE, Xfce, Cinnamon and other desktops implementing the XDG Autostart
 //! specification, and like the Windows `Run` value it belongs to the user.
 
@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
-const FILE_NAME: &str = "codex-minibar.desktop";
+const FILE_NAME: &str = "agent-minibar.desktop";
 
 fn entry_path() -> Result<PathBuf> {
     let base = directories::BaseDirs::new().context("resolve the XDG config directory")?;
@@ -42,10 +42,10 @@ fn entry(executable: &Path) -> String {
     format!(
         "[Desktop Entry]\n\
          Type=Application\n\
-         Name=Codex Minibar\n\
+         Name=Agent Minibar\n\
          Comment=AI tools usage in the system tray\n\
          Exec={}\n\
-         Icon=codex-minibar\n\
+         Icon=agent-minibar\n\
          Terminal=false\n\
          NoDisplay=true\n\
          X-GNOME-Autostart-enabled=true\n",
@@ -99,8 +99,8 @@ mod tests {
 
     #[test]
     fn entry_starts_the_given_program() {
-        let text = entry(Path::new("/usr/bin/codex-minibar"));
+        let text = entry(Path::new("/usr/bin/agent-minibar"));
         assert!(text.starts_with("[Desktop Entry]\n"));
-        assert!(text.contains("Exec=\"/usr/bin/codex-minibar\"\n"));
+        assert!(text.contains("Exec=\"/usr/bin/agent-minibar\"\n"));
     }
 }

@@ -1,6 +1,6 @@
 # Run Cargo from a worktree while reusing the main checkout's warm target directory.
 # Usage: .\cargo-worktree.ps1 check --locked
-# From older worktrees: & C:\Dev\codex-minibar\cargo-worktree.ps1 check --locked
+# From older worktrees: & C:\Dev\agent-minibar\cargo-worktree.ps1 check --locked
 # Quote Cargo's '--' separator when invoking this PowerShell script, for example:
 # .\cargo-worktree.ps1 clippy --locked '--' -D warnings
 # Keep this a simple script: advanced binding would consume Clippy's -D as Debug.
@@ -16,7 +16,7 @@ Set-StrictMode -Version Latest
 # Resolve through Git, not the worktree's parent directory: T3 and Codex put
 # worktrees in different locations. The main checkout already has a warm cache.
 $commonDir = & git rev-parse --path-format=absolute --git-common-dir
-if ($LASTEXITCODE -ne 0) { throw "Run this script inside a Codex Minibar worktree." }
+if ($LASTEXITCODE -ne 0) { throw "Run this script inside a Agent Minibar worktree." }
 $scriptCommonDir = & git -C $PSScriptRoot rev-parse --path-format=absolute --git-common-dir
 if ($LASTEXITCODE -ne 0) { throw "Could not resolve this script's repository." }
 if ([IO.Path]::GetFullPath($commonDir) -ne [IO.Path]::GetFullPath($scriptCommonDir)) {

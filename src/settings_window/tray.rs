@@ -235,7 +235,7 @@ fn widget_title(index: usize, widget: &TrayWidget) -> String {
 /// Style and the providers a widget reads, for list rows and the editor.
 fn widget_short_summary(widget: &TrayWidget) -> String {
     if widget.kind == TrayWidgetKind::AppIcon {
-        return crate::i18n::tr("the-codex-minibar-icon").into();
+        return crate::i18n::tr("the-agent-minibar-icon").into();
     }
     let style = presentation_labels()[presentation_index(widget.presentation)];
     let mut providers: Vec<String> = Vec::new();
@@ -698,7 +698,7 @@ impl SettingsWindow {
             body.push(kit::caption(
                 k,
                 crate::i18n::tr(
-                    "shows-the-codex-minibar-icon-in-the-notification-area-it-has-no-i",
+                    "shows-the-agent-minibar-icon-in-the-notification-area-it-has-no-i",
                 ),
             ));
         } else {

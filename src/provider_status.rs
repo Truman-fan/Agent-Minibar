@@ -25,7 +25,7 @@ use crate::{
     worker::WorkerEvent,
 };
 
-const USER_AGENT: &str = "codex-minibar-provider-status";
+const USER_AGENT: &str = "agent-minibar-provider-status";
 const REFRESH_INTERVAL: Duration = Duration::from_secs(5 * 60);
 /// A failed refresh keeps the last answer only this long, so an outage of the
 /// status page itself neither hides a real incident nor keeps a stale one.

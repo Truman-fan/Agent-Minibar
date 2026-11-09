@@ -128,7 +128,7 @@ fn build_agent() -> ureq::Agent {
     builder
         .timeout_connect(Duration::from_secs(10))
         .timeout(Duration::from_secs(60))
-        .user_agent(concat!("codex-minibar/", env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!("agent-minibar/", env!("CARGO_PKG_VERSION")))
         .build()
 }
 

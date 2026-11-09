@@ -19,7 +19,6 @@ use std::{
 };
 
 use anyhow::{Context, Result, bail};
-use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -194,9 +193,9 @@ pub fn preview_generation() -> u64 {
 }
 
 fn themes_dir() -> Result<PathBuf> {
-    ProjectDirs::from("dev", "Codex Minibar", "Codex Minibar")
-        .map(|dirs| dirs.config_dir().join("vscode-themes"))
-        .context("could not resolve the application config directory")
+    Ok(crate::app_identity::project_dirs()?
+        .config_dir()
+        .join("vscode-themes"))
 }
 
 fn load_library() -> Vec<Arc<VsCodeTheme>> {

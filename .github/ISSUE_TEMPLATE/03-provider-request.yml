@@ -1,5 +1,5 @@
 name: Provider Request
-description: Ask for a provider that is not in Codex Minibar yet, or offer to add it.
+description: Ask for a provider that is not in Agent Minibar yet, or offer to add it.
 title: "[Provider]: "
 type: feature
 labels: [enhancement]
@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Codex Minibar reads **local** provider data (CLI transcripts, desktop app files, or saved credentials). Requests that explain where that data lives are much easier to ship.
+        Agent Minibar reads **local** provider data (CLI transcripts, desktop app files, or saved credentials). Requests that explain where that data lives are much easier to ship.
 
         Please do **not** paste API keys, tokens, credentials, or raw usage history.
 
@@ -48,7 +48,7 @@ body:
     id: why
     attributes:
       label: Why this provider?
-      description: What should Codex Minibar show for it (limits, spend, sessions, reset timers)?
+      description: What should Agent Minibar show for it (limits, spend, sessions, reset timers)?
       placeholder: I want the 5-hour quota and weekly spend in the tray, same as Codex.
 
   - type: checkboxes

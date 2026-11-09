@@ -1,7 +1,7 @@
 //! The popup shortcut as a desktop-owned custom keyboard shortcut.
 //!
 //! The app never grabs keys itself. Settings writes a custom shortcut that
-//! runs `codex-minibar --toggle` into the desktop's own keyboard settings, so
+//! runs `agent-minibar --toggle` into the desktop's own keyboard settings, so
 //! the desktop owns, lists and conflict-checks it like any shortcut the user
 //! added by hand. Only GNOME-based desktops (GNOME, Ubuntu, Pop!_OS, Budgie)
 //! store shortcuts in a place we can write; elsewhere Settings shows the
@@ -15,8 +15,8 @@ const MEDIA_KEYS: &str = "org.gnome.settings-daemon.plugins.media-keys";
 const LIST_KEY: &str = "custom-keybindings";
 const ENTRY_SCHEMA: &str = "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding";
 const ENTRY_PATH: &str =
-    "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/codex-minibar/";
-const ENTRY_NAME: &str = "Codex Minibar";
+    "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/agent-minibar/";
+const ENTRY_NAME: &str = "Agent Minibar";
 
 /// A key plus modifiers, stored the way GTK and GNOME spell accelerators
 /// (`<Control><Alt>m`), so the desktop can read it back unchanged.

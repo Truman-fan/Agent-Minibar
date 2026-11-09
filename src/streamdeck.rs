@@ -1,4 +1,4 @@
-//! Local data bridge for the Codex Minibar Stream Deck companion.
+//! Local data bridge for the Agent Minibar Stream Deck companion.
 //!
 //! The Stream Deck plugin deliberately does not know how to authenticate with
 //! any provider. It reads a short-lived local endpoint description and asks
@@ -29,8 +29,8 @@ use crate::{
     widget_data::{self, ProviderSnapshot},
 };
 
-const PLUGIN_FILE_NAME: &str = "com.vertopolkalf.codex-minibar.streamDeckPlugin";
-const PLUGIN_DOWNLOAD_URL: &str = "https://raw.githubusercontent.com/vertopolkaLF/codex-minibar/main/data/com.vertopolkalf.codex-minibar.streamDeckPlugin";
+const PLUGIN_FILE_NAME: &str = "com.trumanshow.agent-minibar.streamDeckPlugin";
+const PLUGIN_DOWNLOAD_URL: &str = "https://raw.githubusercontent.com/Truman-fan/Agent-Minibar/main/data/com.trumanshow.agent-minibar.streamDeckPlugin";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum InstallPhase {
@@ -68,10 +68,10 @@ fn download_latest_plugin() -> anyhow::Result<PathBuf> {
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis();
-    let directory = std::env::temp_dir().join("Codex Minibar");
+    let directory = std::env::temp_dir().join("Agent Minibar");
     fs::create_dir_all(&directory)?;
     let path = directory.join(format!(
-        "codex-minibar-streamdeck-{}-{stamp}-{PLUGIN_FILE_NAME}",
+        "agent-minibar-streamdeck-{}-{stamp}-{PLUGIN_FILE_NAME}",
         std::process::id()
     ));
     crate::updater::download_file(PLUGIN_DOWNLOAD_URL, &path)?;

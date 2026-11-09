@@ -1,4 +1,4 @@
-# Codex Minibar promo media
+# Agent Minibar promo media
 
 Remotion compositions that rebuild the popup, notifications and Usage tab in
 React for patch notes and the launch video. Colors, sizes, timings, icons and

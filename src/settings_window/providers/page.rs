@@ -60,6 +60,20 @@ fn status_line(
             ),
         };
     }
+    if provider == ProviderKind::DeepSeek {
+        return match readiness {
+            ProviderReadiness::Ready => (
+                if crate::deepseek::key_is_configured(instance.provider_id()) {
+                    crate::i18n::tr("using-a-saved-api-key").into()
+                } else {
+                    "Using DEEPSEEK_API_KEY".into()
+                },
+                dot,
+            ),
+            ProviderReadiness::Checking => (crate::i18n::tr("checking").into(), dot),
+            ProviderReadiness::NeedsSetup => (crate::i18n::tr("needs-an-api-key").into(), dot),
+        };
+    }
     let text = match readiness {
         ProviderReadiness::Checking => crate::i18n::tr("checking").to_owned(),
         ProviderReadiness::NeedsSetup => match provider {
@@ -448,6 +462,7 @@ impl SettingsWindow {
             ProviderKind::OpenCodeZen | ProviderKind::OpenCodeGo => {
                 return self.opencode_key_section(instance, k, cx);
             }
+            ProviderKind::DeepSeek => return self.deepseek_key_section(instance, k, cx),
             _ => return Vec::new(),
         }
         let identity = self.openrouter.identities.get(&instance.id).cloned();
@@ -565,7 +580,7 @@ impl SettingsWindow {
     ) -> Vec<AnyElement> {
         let provider = instance.provider_id();
         let driver = instance.driver;
-        if driver == ProviderKind::OpenRouter {
+        if matches!(driver, ProviderKind::OpenRouter | ProviderKind::DeepSeek) {
             return Vec::new();
         }
         let mut out = vec![kit::section_header(
@@ -1142,6 +1157,82 @@ impl SettingsWindow {
                         .on_click(Self::h(cx, move |this, (), window, cx| {
                             this.open_provider_dialog(
                                 ProviderDialog::new(ProviderDialogKind::OpenCodeKey {
+                                    provider,
+                                    replace: false,
+                                }),
+                                window,
+                                cx,
+                            )
+                        }))
+                        .render(k),
+                ),
+        };
+        vec![
+            kit::section_heading(k, crate::i18n::tr("account")),
+            kit::row_card(k, row),
+        ]
+    }
+
+    fn deepseek_key_section(
+        &mut self,
+        instance: &ProviderInstance,
+        k: &mut Kit,
+        cx: &mut Context<Self>,
+    ) -> Vec<AnyElement> {
+        let provider = instance.provider_id();
+        let saved_key = crate::deepseek::manual_key(provider)
+            .ok()
+            .flatten()
+            .filter(|value| !value.trim().is_empty());
+        let row = Row::new("deepseek-api-key", crate::i18n::tr("api-key"))
+            .icon(kit::row_icon(k, "key-fill"));
+        let row = match saved_key {
+            Some(key) => row
+                .description(
+                    k,
+                    if cfg!(windows) {
+                        crate::i18n::tr("saved-in-windows-user-storage")
+                    } else {
+                        crate::i18n::tr("linux-saved-in-windows-user-storage")
+                    },
+                )
+                .trailing(masked(k, crate::secrets::masked_hint(&key)))
+                .trailing(kit::more_menu(
+                    k,
+                    format!("deepseek-key-{}", provider.id()),
+                    vec![
+                        MenuItem::new(crate::i18n::tr("replace-key")).icon("pencil-simple-fill"),
+                        MenuItem::new(crate::i18n::tr("remove-key"))
+                            .icon("trash-fill")
+                            .danger(),
+                    ],
+                    Self::h(cx, move |this, choice: usize, window, cx| {
+                        let kind = if choice == 1 {
+                            ProviderDialogKind::RemoveDeepSeekKey { provider }
+                        } else {
+                            ProviderDialogKind::DeepSeekKey {
+                                provider,
+                                replace: true,
+                            }
+                        };
+                        this.open_provider_dialog(ProviderDialog::new(kind), window, cx)
+                    }),
+                )),
+            None => row
+                .description(
+                    k,
+                    if instance.is_primary() {
+                        "Optional when DEEPSEEK_API_KEY is set for this PC."
+                    } else {
+                        crate::i18n::tr("add-the-key-of-the-account-this-instance-tracks")
+                    },
+                )
+                .trailing(
+                    Button::new("deepseek-add-key", crate::i18n::tr("add-api-key"))
+                        .with_icon("plus-bold")
+                        .on_click(Self::h(cx, move |this, (), window, cx| {
+                            this.open_provider_dialog(
+                                ProviderDialog::new(ProviderDialogKind::DeepSeekKey {
                                     provider,
                                     replace: false,
                                 }),

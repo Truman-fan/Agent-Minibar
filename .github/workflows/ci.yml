@@ -32,7 +32,7 @@ jobs:
           toolchain: 1.95.0
           components: rustfmt
       - name: Check formatting
-        run: cargo fmt --package codex-minibar --check
+        run: cargo fmt --package agent-minibar --check
 
   lint:
     name: Lint

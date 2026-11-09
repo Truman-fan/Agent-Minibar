@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+  xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap3 rescap">
+
+  <!-- Installed unsigned (Add-AppxPackage -AllowUnsigned): the OID marks the
+       identity as unsigned, so it can never collide with a signed package.
+       The legacy publisher string is intentionally retained so existing
+       unsigned installations keep the same publisher hash. src/cmdpal.rs
+       hard-codes the package family derived from it. -->
+  <Identity
+    Name="AgentMinibar.CommandPalette"
+    Publisher="CN=Codex Minibar, OID.2.25.311729368913984317654407730594956997722=1"
+    Version="1.0.0.0" />
+
+  <Properties>
+    <DisplayName>Agent Minibar for Command Palette</DisplayName>
+    <PublisherDisplayName>Agent Minibar</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="x-generate"/>
+  </Resources>
+
+  <Applications>
+    <Application Id="App"
+      Executable="$targetnametoken$.exe"
+      EntryPoint="$targetentrypoint$">
+      <uap:VisualElements
+        DisplayName="Agent Minibar for Command Palette"
+        Description="AI usage limits from Agent Minibar in PowerToys Command Palette and its Dock."
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png"
+        AppListEntry="none" />
+      <Extensions>
+        <com:Extension Category="windows.comServer">
+          <com:ComServer>
+            <com:ExeServer Executable="AgentMinibar.CommandPalette.exe" Arguments="-RegisterProcessAsComServer" DisplayName="Agent Minibar">
+              <com:Class Id="6DF5AB2A-58CE-4F39-A24B-CB5269577412" DisplayName="Agent Minibar" />
+            </com:ExeServer>
+          </com:ComServer>
+        </com:Extension>
+        <uap3:Extension Category="windows.appExtension">
+          <uap3:AppExtension Name="com.microsoft.commandpalette"
+            Id="AgentMinibar"
+            PublicFolder="Public"
+            DisplayName="Agent Minibar"
+            Description="AI usage limits from Agent Minibar.">
+            <uap3:Properties>
+              <CmdPalProvider>
+                <Activation>
+                  <CreateInstance ClassId="6DF5AB2A-58CE-4F39-A24B-CB5269577412" />
+                </Activation>
+                <SupportedInterfaces>
+                  <Commands/>
+                </SupportedInterfaces>
+              </CmdPalProvider>
+            </uap3:Properties>
+          </uap3:AppExtension>
+        </uap3:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>

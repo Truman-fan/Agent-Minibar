@@ -1,0 +1,61 @@
+name: Mirror releases to Gitee
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published GitHub release tag to mirror
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gitee-release-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - name: Download GitHub release assets
+        if: ${{ env.GITEE_TOKEN != '' }}
+        run: gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir release-assets
+
+      - name: Create Gitee release and upload assets
+        if: ${{ env.GITEE_TOKEN != '' }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $api = "https://gitee.com/api/v5/repos/Truman-fan/Agent-Minibar"
+          $tag = $env:RELEASE_TAG
+          $headers = @{ Authorization = "Bearer $($env:GITEE_TOKEN)" }
+          $githubRelease = gh release view $tag --repo $env:GITHUB_REPOSITORY --json name,body,targetCommitish | ConvertFrom-Json
+          $form = @{
+            tag_name = $tag
+            name = if ($githubRelease.name) { $githubRelease.name } else { "Agent Minibar $tag" }
+            body = $githubRelease.body
+            target_commitish = $githubRelease.targetCommitish
+            prerelease = "false"
+          }
+          try {
+            $release = Invoke-RestMethod -Method Post -Uri "$api/releases" -Headers $headers -Body $form
+          } catch {
+            $release = Invoke-RestMethod -Method Get -Uri "$api/releases/tags/$tag" -Headers $headers
+          }
+          Get-ChildItem -LiteralPath release-assets -File | Sort-Object Name | ForEach-Object {
+            Write-Host "Uploading $($_.Name)"
+            Invoke-RestMethod -Method Post -Uri "$api/releases/$($release.id)/attach_files" -Headers $headers -Form @{ file = $_ } | Out-Null
+          }
+
+      - name: Explain missing mirror credential
+        if: ${{ env.GITEE_TOKEN == '' }}
+        run: echo "Set the GITEE_TOKEN repository secret to enable Gitee release mirroring."

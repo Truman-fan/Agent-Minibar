@@ -143,9 +143,9 @@ fn wide(value: &str) -> Vec<u16> {
     value.encode_utf16().chain(Some(0)).collect()
 }
 
-const CONTROLLER_CLASS: &str = "CodexMinibarTaskbarController";
-const WIDGET_CLASS: &str = "CodexMinibarTaskbarWidgets";
-const CARD_CLASS: &str = "CodexMinibarTaskbarCard";
+const CONTROLLER_CLASS: &str = "AgentMinibarTaskbarController";
+const WIDGET_CLASS: &str = "AgentMinibarTaskbarWidgets";
+const CARD_CLASS: &str = "AgentMinibarTaskbarCard";
 
 fn run() {
     unsafe {
@@ -338,7 +338,7 @@ fn context_menu(owner: HWND, target: MenuTarget) -> Option<Action> {
             let text = wide(text);
             AppendMenuW(menu, flags, id, text.as_ptr());
         };
-        let header = format!("Codex Minibar - {}", env!("CARGO_PKG_VERSION"));
+        let header = format!("Agent Minibar - {}", env!("CARGO_PKG_VERSION"));
         append(MF_STRING | MF_GRAYED, 0, &header);
         AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
         if target.widget.is_some() {
@@ -388,12 +388,14 @@ fn context_menu(owner: HWND, target: MenuTarget) -> Option<Action> {
                 provider: provider.flatten(),
                 anchor: (cursor.x, cursor.y),
                 page: target.page,
+                dismiss_on_outside_click: false,
+                floating_slot: None,
             }),
             MENU_EDIT => id.map(Action::Edit),
             MENU_SETTINGS => Some(Action::Settings),
             MENU_HIDE => Some(Action::Hide),
             MENU_UPDATE => Some(Action::Update),
-            MENU_APP_SETTINGS => Some(Action::AppSettings),
+            MENU_APP_SETTINGS => Some(Action::AppSettings { show_preview: true }),
             MENU_EXIT => Some(Action::Exit),
             _ => None,
         }
@@ -1034,7 +1036,7 @@ impl Host {
         }
         unsafe {
             let class = wide(WIDGET_CLASS);
-            let title = wide("Codex Minibar Taskbar Widgets");
+            let title = wide("Agent Minibar Taskbar Widgets");
             // Created top-level, then re-parented: Windows refuses a child
             // created directly under another process's window.
             let window = CreateWindowExW(
@@ -1600,6 +1602,8 @@ impl Host {
             provider,
             anchor: (cursor.x, cursor.y),
             page: self.click_page(),
+            dismiss_on_outside_click: false,
+            floating_slot: None,
         })
     }
 }
@@ -1706,7 +1710,7 @@ fn key(rect: RECT) -> (i32, i32, i32, i32) {
     (rect.left, rect.top, rect.right, rect.bottom)
 }
 
-fn current_appearance(colored_icons: bool) -> Appearance {
+pub(super) fn current_appearance(colored_icons: bool) -> Appearance {
     Appearance {
         light: crate::taskbar::uses_light_theme(),
         colored_icons,

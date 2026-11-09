@@ -11,12 +11,14 @@ pub(super) fn refresh_all_workers(commands: &[(ProviderId, Sender<WorkerCommand>
 /// Publish view state to the GPUI popup. Hidden popups only store it; the
 /// renderer repaints when it is shown, so background polls stay cheap.
 pub(super) fn publish_popup_ui(ui: &UiState) {
+    crate::taskbar::publish_provider_errors(ui.provider_errors.clone());
     super::publish_ui(ui);
 }
 
 /// Same as [`publish_popup_ui`]; kept separate to mark paths that must reach
 /// the renderer before the next show.
 pub(super) fn flush_popup_ui(ui: &UiState) {
+    crate::taskbar::publish_provider_errors(ui.provider_errors.clone());
     super::publish_ui(ui);
 }
 
@@ -436,6 +438,7 @@ pub(crate) struct UiState {
     pub(super) popup_height_dip: Option<u32>,
     pub(super) popup_position: Option<crate::settings::PopupPosition>,
     pub(super) popup_placement: crate::settings::PopupPlacement,
+    pub(super) floating_circle_slots: Vec<FloatingCircleSlot>,
     /// Every configured instance in display order, enabled or not.
     pub(super) instances: Vec<ProviderInstance>,
     pub(super) popup_tab_mode: PopupTabMode,
@@ -493,6 +496,7 @@ impl Default for UiState {
             popup_height_dip: None,
             popup_position: None,
             popup_placement: crate::settings::PopupPlacement::default(),
+            floating_circle_slots: Settings::default().floating_circle_slots,
             instances: Settings::default().instances,
             popup_tab_mode: PopupTabMode::default(),
             grouped_tab_selection: Default::default(),
@@ -523,6 +527,7 @@ impl UiState {
             popup_two_columns: settings.popup_two_columns,
             show_popup_action_bar: settings.show_popup_action_bar,
             popup_floating: settings.popup_floating,
+            floating_circle_slots: settings.floating_circle_slots.clone(),
             popup_home_order: settings.popup_home_order.clone(),
             popup_home_right_column: settings.popup_home_right_column.clone(),
             popup_home_card_layouts: settings.popup_home_card_layouts.clone(),
@@ -562,6 +567,7 @@ impl UiState {
         self.popup_height_dip = settings.popup_height_dip;
         self.popup_position = settings.popup_position.clone();
         self.popup_placement = settings.popup_placement;
+        self.floating_circle_slots = settings.floating_circle_slots.clone();
         self.instances = settings.instances.clone();
         self.popup_tab_mode = settings.popup_tab_mode;
         self.grouped_tab_selection = settings.grouped_tab_selection.clone();

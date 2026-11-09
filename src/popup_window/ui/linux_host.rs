@@ -143,6 +143,7 @@ impl Host {
             is_movable: true,
             is_resizable: false,
             is_minimizable: false,
+            has_native_caption_buttons: false,
             display_id: None,
             window_background: WindowBackgroundAppearance::Transparent,
             app_id: Some(crate::linux::identity::APP_ID.into()),

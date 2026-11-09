@@ -335,6 +335,125 @@ pub const PROVIDERS: &[ProviderDescriptor] = &[
         metrics: COMMAND_CODE_METRICS,
         default_tray_metrics: &["command-code.session", "command-code.weekly"],
     },
+    ProviderDescriptor {
+        kind: ProviderKind::DeepSeek,
+        id: "deepseek",
+        display_name: "DeepSeek",
+        icon: "deepseek",
+        brand_rgb: (87, 134, 254),
+        supports_activation: false,
+        include_in_total_spend: false,
+        supports_multiple_instances: true,
+        // The official balance endpoint reports currency balances, not a
+        // percentage quota or reset window. Keep the tray honest and render
+        // the value in the popup credits card instead of inventing a ring.
+        metrics: &[],
+        default_tray_metrics: &[],
+    },
+    ProviderDescriptor {
+        kind: ProviderKind::QwenCode,
+        id: "qwen-code",
+        display_name: "Qwen Code",
+        icon: "qwen",
+        brand_rgb: (97, 83, 255),
+        supports_activation: false,
+        include_in_total_spend: true,
+        supports_multiple_instances: false,
+        // Qwen Code currently exposes authoritative local token usage but no
+        // documented remaining-quota percentage. Usage gets its own popup
+        // card; no quota ring is synthesized here.
+        metrics: &[],
+        default_tray_metrics: &[],
+    },
+    ProviderDescriptor {
+        kind: ProviderKind::DeepSeekHarness,
+        id: "deepseek-harness",
+        display_name: "DeepSeek Harness",
+        icon: "deepseek",
+        brand_rgb: (87, 134, 254),
+        supports_activation: false,
+        // Harness is a transport view and can include several model families;
+        // family providers own the aggregate to avoid double counting.
+        include_in_total_spend: false,
+        supports_multiple_instances: false,
+        metrics: &[],
+        default_tray_metrics: &[],
+    },
+    ProviderDescriptor {
+        kind: ProviderKind::KimiCode,
+        id: "kimi-code",
+        display_name: "Kimi Code",
+        icon: "kimi",
+        brand_rgb: (50, 125, 255),
+        supports_activation: false,
+        // Model-family views can read the same rows as OpenCode or a harness
+        // transport. Exclude them from the combined total so enabling both
+        // views never doubles a request.
+        include_in_total_spend: false,
+        supports_multiple_instances: false,
+        metrics: &[],
+        default_tray_metrics: &[],
+    },
+    ProviderDescriptor {
+        kind: ProviderKind::VolcengineArk,
+        id: "volcengine-ark",
+        display_name: "Doubao / Ark",
+        icon: "volcengine",
+        brand_rgb: (51, 112, 255),
+        supports_activation: false,
+        include_in_total_spend: false,
+        supports_multiple_instances: false,
+        metrics: &[],
+        default_tray_metrics: &[],
+    },
+    ProviderDescriptor {
+        kind: ProviderKind::ZhipuGlm,
+        id: "zhipu-glm",
+        display_name: "Zhipu GLM",
+        icon: "zhipu",
+        brand_rgb: (47, 103, 255),
+        supports_activation: false,
+        include_in_total_spend: false,
+        supports_multiple_instances: false,
+        metrics: &[],
+        default_tray_metrics: &[],
+    },
+    ProviderDescriptor {
+        kind: ProviderKind::MiniMaxCode,
+        id: "minimax-code",
+        display_name: "MiniMax",
+        icon: "minimax",
+        brand_rgb: (248, 87, 73),
+        supports_activation: false,
+        include_in_total_spend: false,
+        supports_multiple_instances: false,
+        metrics: &[],
+        default_tray_metrics: &[],
+    },
+    ProviderDescriptor {
+        kind: ProviderKind::BaiduQianfan,
+        id: "baidu-qianfan",
+        display_name: "Qianfan / ERNIE",
+        icon: "baidu",
+        brand_rgb: (41, 93, 255),
+        supports_activation: false,
+        include_in_total_spend: false,
+        supports_multiple_instances: false,
+        metrics: &[],
+        default_tray_metrics: &[],
+    },
+    ProviderDescriptor {
+        kind: ProviderKind::TencentHunyuan,
+        id: "tencent-hunyuan",
+        display_name: "Hunyuan / CodeBuddy",
+        icon: "hunyuan",
+        brand_rgb: (27, 113, 255),
+        supports_activation: false,
+        include_in_total_spend: false,
+        supports_multiple_instances: false,
+        metrics: &[],
+        default_tray_metrics: &[],
+    },
 ];
 
 pub fn descriptor(provider: ProviderKind) -> &'static ProviderDescriptor {
@@ -378,6 +497,15 @@ pub fn light_surface_brand_rgb(provider: ProviderKind) -> (u8, u8, u8) {
         ProviderKind::Grok => (51, 51, 51),
         ProviderKind::Kiro => (105, 78, 198),
         ProviderKind::CommandCode => (51, 51, 51),
+        ProviderKind::DeepSeek => (65, 105, 230),
+        ProviderKind::QwenCode => (78, 67, 224),
+        ProviderKind::DeepSeekHarness => (65, 105, 230),
+        ProviderKind::KimiCode => (37, 104, 230),
+        ProviderKind::VolcengineArk => (40, 91, 220),
+        ProviderKind::ZhipuGlm => (39, 84, 218),
+        ProviderKind::MiniMaxCode => (215, 61, 52),
+        ProviderKind::BaiduQianfan => (35, 76, 218),
+        ProviderKind::TencentHunyuan => (24, 92, 215),
     }
 }
 
@@ -443,6 +571,15 @@ pub fn supports_banked_resets(provider: ProviderKind) -> bool {
             | ProviderKind::Grok
             | ProviderKind::Kiro
             | ProviderKind::CommandCode
+            | ProviderKind::DeepSeek
+            | ProviderKind::QwenCode
+            | ProviderKind::DeepSeekHarness
+            | ProviderKind::KimiCode
+            | ProviderKind::VolcengineArk
+            | ProviderKind::ZhipuGlm
+            | ProviderKind::MiniMaxCode
+            | ProviderKind::BaiduQianfan
+            | ProviderKind::TencentHunyuan
     )
 }
 
@@ -454,6 +591,14 @@ pub fn supports_credits(provider: ProviderKind) -> bool {
             | ProviderKind::Antigravity
             | ProviderKind::Grok
             | ProviderKind::Kiro
+            | ProviderKind::QwenCode
+            | ProviderKind::DeepSeekHarness
+            | ProviderKind::KimiCode
+            | ProviderKind::VolcengineArk
+            | ProviderKind::ZhipuGlm
+            | ProviderKind::MiniMaxCode
+            | ProviderKind::BaiduQianfan
+            | ProviderKind::TencentHunyuan
     )
 }
 
@@ -461,7 +606,7 @@ pub fn supports_credits(provider: ProviderKind) -> bool {
 pub fn supports_usage_stats(provider: ProviderKind) -> bool {
     !matches!(
         provider,
-        ProviderKind::Antigravity | ProviderKind::Grok | ProviderKind::Kiro
+        ProviderKind::Antigravity | ProviderKind::Grok | ProviderKind::Kiro // DeepSeek combines official balance with local model usage.
     )
 }
 

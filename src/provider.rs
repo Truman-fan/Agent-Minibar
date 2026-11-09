@@ -323,6 +323,49 @@ fn start_driver_worker(
                 false
             )
         }
+        ProviderKind::DeepSeek => start_worker!(
+            crate::deepseek::DeepSeekClient::new(provider)?,
+            crate::deepseek::DeepSeekClient::new(provider)?,
+            crate::deepseek::DeepSeekClient::new(provider)?,
+            false
+        ),
+        ProviderKind::QwenCode => {
+            if let Some(executable) =
+                crate::qwen_code::cli_available(instance.binary_path.as_deref())
+            {
+                crate::logger::info(format!("Qwen Code launcher: {}", executable.display()));
+            }
+            start_worker!(
+                crate::qwen_code::QwenCodeClient::new(provider),
+                crate::qwen_code::QwenCodeClient::new(provider),
+                crate::qwen_code::QwenCodeActivator,
+                false
+            )
+        }
+        ProviderKind::DeepSeekHarness
+        | ProviderKind::KimiCode
+        | ProviderKind::VolcengineArk
+        | ProviderKind::ZhipuGlm
+        | ProviderKind::MiniMaxCode
+        | ProviderKind::BaiduQianfan
+        | ProviderKind::TencentHunyuan => {
+            if let Some(executable) = crate::domestic_agents::cli_available(
+                instance.driver,
+                instance.binary_path.as_deref(),
+            ) {
+                crate::logger::info(format!(
+                    "{} launcher: {}",
+                    provider.display_name(),
+                    executable.display()
+                ));
+            }
+            start_worker!(
+                crate::domestic_agents::LocalAgentClient::new(provider)?,
+                crate::domestic_agents::LocalAgentClient::new(provider)?,
+                crate::domestic_agents::LocalAgentActivator,
+                false
+            )
+        }
     })
 }
 
@@ -417,6 +460,17 @@ fn provider_activation_path(provider: ProviderId, base_path: PathBuf) -> PathBuf
         ProviderKind::Grok => base_path.with_file_name("activation-grok.toml"),
         ProviderKind::Kiro => base_path.with_file_name("activation-kiro.toml"),
         ProviderKind::CommandCode => base_path.with_file_name("activation-command-code.toml"),
+        ProviderKind::DeepSeek => base_path.with_file_name("activation-deepseek.toml"),
+        ProviderKind::QwenCode => base_path.with_file_name("activation-qwen-code.toml"),
+        ProviderKind::DeepSeekHarness => {
+            base_path.with_file_name("activation-deepseek-harness.toml")
+        }
+        ProviderKind::KimiCode => base_path.with_file_name("activation-kimi-code.toml"),
+        ProviderKind::VolcengineArk => base_path.with_file_name("activation-volcengine-ark.toml"),
+        ProviderKind::ZhipuGlm => base_path.with_file_name("activation-zhipu-glm.toml"),
+        ProviderKind::MiniMaxCode => base_path.with_file_name("activation-minimax-code.toml"),
+        ProviderKind::BaiduQianfan => base_path.with_file_name("activation-baidu-qianfan.toml"),
+        ProviderKind::TencentHunyuan => base_path.with_file_name("activation-tencent-hunyuan.toml"),
     }
 }
 

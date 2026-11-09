@@ -31,8 +31,8 @@ use crate::notifications::{Notification, NotificationAction, NotificationKind, n
 use crate::settings::Settings;
 
 pub const BASE_URL: &str =
-    "https://raw.githubusercontent.com/vertopolkaLF/codex-minibar/main/data/releases";
-const USER_AGENT: &str = "codex-minibar-whats-new";
+    "https://raw.githubusercontent.com/Truman-fan/Agent-Minibar/main/data/releases";
+const USER_AGENT: &str = "agent-minibar-whats-new";
 const STATE_FILE: &str = "whats-new.json";
 const MAX_MARKDOWN_BYTES: u64 = 64 * 1024;
 const MAX_IMAGE_BYTES: u64 = 3 * 1024 * 1024;

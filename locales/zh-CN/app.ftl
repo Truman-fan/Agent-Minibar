@@ -1,4 +1,4 @@
-# Codex Minibar — zh-CN
+# Agent Minibar — zh-CN
 # Full Fluent catalog; parameters and technical names remain unchanged.
 
 luna-reserve = Luna 储备额度
@@ -461,9 +461,9 @@ data = 数据
 
 rendering = 渲染
 
-software-rendering = 软件渲染
+software-rendering = 兼容渲染（推荐）
 
-software-rendering-description = 使用 CPU 而不是显卡绘制窗口。在游戏占满 GPU 时可能有帮助；动画可能不够流畅。
+software-rendering-description = 使用 Windows WARP 而不是显卡绘制窗口，可避开 NVIDIA 等图形覆盖层导致的空白窗口和提示；动画可能略不流畅。
 
 settings-exported = 设置已导出。
 
@@ -660,7 +660,7 @@ msg-60-minutes = 60 分钟
 
 start-with-windows = 随 Windows 启动
 
-open-codex-minibar-in-the-tray-when-you-sign-in = 登录 Windows 时在托盘中打开 Codex Minibar。
+open-agent-minibar-in-the-tray-when-you-sign-in = 登录 Windows 时在托盘中打开 Agent Minibar。
 
 refresh-interval = 刷新间隔
 
@@ -1335,7 +1335,7 @@ app-icon = 应用图标
 
 widget = 组件 { $v0 }
 
-the-codex-minibar-icon = Codex Minibar 图标
+the-agent-minibar-icon = Agent Minibar 图标
 
 style-no-indicators = { $style } · 无指示器
 
@@ -1359,7 +1359,7 @@ edit = 编辑
 
 duplicate = 复制
 
-shows-the-codex-minibar-icon-in-the-notification-area-it-has-no-i = 在通知区域显示 Codex Minibar 图标。没有需要配置的指示器。
+shows-the-agent-minibar-icon-in-the-notification-area-it-has-no-i = 在通知区域显示 Agent Minibar 图标。没有需要配置的指示器。
 
 style = 样式
 
@@ -1423,9 +1423,9 @@ english = English
 
 msg-russian = Русский
 
-codex-minibar-settings = Codex Minibar 设置
+agent-minibar-settings = Agent Minibar 设置
 
-welcome-to-codex-minibar = 欢迎使用 Codex Minibar
+welcome-to-agent-minibar = 欢迎使用 Agent Minibar
 
 exit = 退出
 
@@ -1729,7 +1729,7 @@ update-installing = 正在安装更新
 update-unpacking = 正在解压文件…
 
 # src/updater.rs
-update-restarting = 正在重启 Codex Minibar
+update-restarting = 正在重启 Agent Minibar
 
 # src/updater.rs
 update-restarting-body = 应用即将重新打开。
@@ -1829,7 +1829,7 @@ taskbar-style-glance = 速览
 taskbar-style-glance-hint = 提供商图标旁边显示两行文字，就像天气按钮。
 taskbar-style-rings-hint = 每个额度一个进度环，旁边显示数值。
 taskbar-style-bars-hint = 在提供商图标旁边堆叠细进度条。
-taskbar-menu-open = 打开 Codex Minibar
+taskbar-menu-open = 打开 Agent Minibar
 taskbar-menu-settings = 任务栏组件设置
 taskbar-menu-hide = 隐藏任务栏组件
 taskbar-card-left = 剩余 { $value }
@@ -2086,7 +2086,7 @@ banked-reset-applied = 已应用已储备重置
 linux-no-tray-title = 未找到系统托盘
 
 # src/tray.rs
-linux-no-tray-body = 启用 AppIndicator 扩展即可在面板中看到 Codex Minibar。再次启动 Codex Minibar 可将其打开。
+linux-no-tray-body = 启用 AppIndicator 扩展即可在面板中看到 Agent Minibar。再次启动 Agent Minibar 可将其打开。
 
 # src/settings_window/general.rs
 start-at-login = 登录时启动
@@ -2146,3 +2146,37 @@ linux-popup-shortcut-choose = 设置快捷键
 linux-popup-shortcut-dialog-hint = 按下要使用的组合键。它将作为自定义快捷键保存到桌面的键盘设置中。
 linux-popup-shortcut-needs-modifier = 请包含 Ctrl、Alt 或 Super，或使用 F13–F24。
 linux-popup-shortcut-save-failed = 桌面未接受该快捷键。请重试，或在其键盘设置中添加命令。
+floating-circle = 悬浮圈
+floating-circle-description = 即使任务栏隐藏，也在其他应用上方显示剩余额度圆环。拖动可移动，单击可打开弹窗。
+floating-circle-color-mode = 额度颜色
+floating-circle-color-gradient = 随额度渐变
+floating-circle-label-5h = 5小时
+floating-circle-label-1w = 1周
+floating-circle-position = 悬浮圈位置
+floating-circle-position-description = 将悬浮圈重置到当前显示器的右上角。
+qwen-code-cli-folder = Qwen Code CLI 文件夹
+folder-with-qwen-exe-qwen-cmd-or-qwen-ps1 = 包含 qwen.exe、qwen.cmd 或 qwen.ps1 的文件夹。留空可自动查找。
+reads-qwen-code-settings-and-local-token-history = 读取 Qwen Code 设置和本地 Token 历史，不使用其中的凭据。
+qwen-local-data = Qwen 本地数据
+qwen-code-cli = Qwen Code CLI
+found-qwen-code-settings-or-local-history = 已找到 Qwen Code 设置或本地历史。
+qwen-code-settings-and-local-history-not-found = 未找到 Qwen Code 设置或本地历史。
+reads-deepseek-harness-root-agent-history = 读取本地 DeepSeek Harness 会话中根 Agent 与委派子 Agent 的 Token 用量，不统计种子会话。
+reads-kimi-model-local-agent-history = 从受支持的本地 Agent 历史读取 Kimi 模型用量，不统计 Kimi Code 子 Agent。
+reads-domestic-model-local-agent-history = 从受支持的本地 Agent 历史读取此模型系列的 Token 用量，不访问任何凭据。
+floating-circle-switch-target = 切换目标
+floating-circle-add-second = 添加第二圈
+floating-circle-close-this = 关闭此圈
+provider-tab-order = 提供商顺序
+provider-tab-order-description = 先单击一个图标，再单击目标位置；也可直接拖动图标。顺序会同步到额度信息卡。
+floating-circle-primary-target = 第一圈显示目标
+floating-circle-secondary-target = 第二圈显示目标
+floating-circle-target-description = 选择此悬浮圈显示剩余额度的提供商账户。
+floating-circle-second = 第二悬浮圈
+floating-circle-second-description = 在第一圈下方显示一个可选的第二圈，两个悬浮圈一起移动。
+floating-circle-card-balance = 余额
+floating-circle-card-quota = 额度
+floating-circle-not-authorized = 未授权
+floating-circle-temporarily-unavailable = 暂不可用
+floating-circle-loading-quota = 获取中
+floating-circle-no-quota-api = 无额度接口

@@ -192,7 +192,7 @@ export const sections = (layouts: Partial<Record<string, Layout>> = {}): Section
     provider: "codex",
     name: "Codex",
     plan: "Pro",
-    account: "vertopolkaLF",
+    account: "Truman-fan",
     layout: layouts.codex ?? "rings",
     quotas: [
       { id: "x5", title: "session", left: 82, reset: "4h 12m", ticks: 4, pace: { state: "reserve", delta: 9, at: 20 } },

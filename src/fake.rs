@@ -38,7 +38,7 @@ pub fn serves(driver: ProviderKind) -> bool {
 
 pub fn settings_path() -> PathBuf {
     std::env::temp_dir()
-        .join("codex-minibar-fake")
+        .join("agent-minibar-fake")
         .join("settings.toml")
 }
 

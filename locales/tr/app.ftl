@@ -1,4 +1,4 @@
-### Codex Minibar application messages.
+### Agent Minibar application messages.
 ### Turkish translation. Keep $parameters unchanged.
 
 # src/provider_registry.rs
@@ -979,7 +979,7 @@ msg-60-minutes = 60 dakika
 start-with-windows = Windows ile başlat
 
 # src/settings_window/general.rs
-open-codex-minibar-in-the-tray-when-you-sign-in = Oturum açtığınızda Codex Minibar'ı sistem tepsisinde aç.
+open-agent-minibar-in-the-tray-when-you-sign-in = Oturum açtığınızda Agent Minibar'ı sistem tepsisinde aç.
 
 # src/settings_window/onboarding.rs
 refresh-interval = Yenileme aralığı
@@ -1980,7 +1980,7 @@ app-icon = Uygulama simgesi
 widget = Araç { $v0 }
 
 # src/settings_window/tray.rs
-the-codex-minibar-icon = Codex Minibar simgesi
+the-agent-minibar-icon = Agent Minibar simgesi
 
 # src/settings_window/tray.rs
 style-no-indicators = { $style } · Gösterge yok
@@ -2016,7 +2016,7 @@ edit = Düzenle
 duplicate = Çoğalt
 
 # src/settings_window/tray.rs
-shows-the-codex-minibar-icon-in-the-notification-area-it-has-no-i = Bildirim alanında Codex Minibar simgesini gösterir. Ayarlanacak göstergesi yoktur.
+shows-the-agent-minibar-icon-in-the-notification-area-it-has-no-i = Bildirim alanında Agent Minibar simgesini gösterir. Ayarlanacak göstergesi yoktur.
 
 # src/settings_window/tray.rs
 style = Stil
@@ -2112,10 +2112,10 @@ english = English
 msg-russian = Русский
 
 # application
-codex-minibar-settings = Codex Minibar Ayarları
+agent-minibar-settings = Agent Minibar Ayarları
 
 # application
-welcome-to-codex-minibar = Codex Minibar'a Hoş Geldiniz
+welcome-to-agent-minibar = Agent Minibar'a Hoş Geldiniz
 
 # application
 exit = Çıkış
@@ -2630,7 +2630,7 @@ update-installing = Güncelleme yükleniyor
 update-unpacking = Dosyalar çıkarılıyor…
 
 # src/updater.rs
-update-restarting = Codex Minibar yeniden başlatılıyor
+update-restarting = Agent Minibar yeniden başlatılıyor
 
 # src/updater.rs
 update-restarting-body = Uygulama birazdan yeniden açılacak.
@@ -2730,7 +2730,7 @@ taskbar-style-glance = Bir bakışta
 taskbar-style-glance-hint = Hava durumu düğmesi gibi, iki satır metnin yanında sağlayıcı simgesi.
 taskbar-style-rings-hint = Her kota için yanında değeri olan bir ilerleme halkası.
 taskbar-style-bars-hint = Sağlayıcı simgesinin yanında üst üste ince ilerleme çubukları.
-taskbar-menu-open = Codex Minibar'ı aç
+taskbar-menu-open = Agent Minibar'ı aç
 taskbar-menu-settings = Görev çubuğu aracı ayarları
 taskbar-menu-hide = Görev çubuğu araçlarını gizle
 taskbar-card-left = { $value } kaldı
@@ -2987,7 +2987,7 @@ banked-reset-applied = Birikmiş sıfırlama uygulandı
 linux-no-tray-title = Sistem tepsisi bulunamadı
 
 # src/tray.rs
-linux-no-tray-body = Codex Minibar’ı panelde görmek için AppIndicator uzantısını etkinleştirin. Açmak için Codex Minibar’ı yeniden başlatın.
+linux-no-tray-body = Agent Minibar’ı panelde görmek için AppIndicator uzantısını etkinleştirin. Açmak için Agent Minibar’ı yeniden başlatın.
 
 # src/settings_window/general.rs
 start-at-login = Oturum açılışında başlat
@@ -3047,3 +3047,37 @@ linux-popup-shortcut-choose = Kısayol ayarla
 linux-popup-shortcut-dialog-hint = Kullanmak istediğiniz tuş birleşimine basın. Masaüstünüzün klavye ayarlarında özel kısayol olarak kaydedilir.
 linux-popup-shortcut-needs-modifier = Ctrl, Alt veya Super ekleyin ya da F13–F24 kullanın.
 linux-popup-shortcut-save-failed = Masaüstü kısayolu kabul etmedi. Yeniden deneyin veya komutu klavye ayarlarına ekleyin.
+floating-circle = Yüzen daire
+floating-circle-description = Görev çubuğu gizliyken bile kota halkalarını diğer uygulamaların üstünde tutar. Taşımak için sürükleyin, açmak için tıklayın.
+floating-circle-color-mode = Kota rengi
+floating-circle-color-gradient = Kotaya göre değişir
+floating-circle-label-5h = 5 sa
+floating-circle-label-1w = 1 hf
+floating-circle-position = Yüzen daire konumu
+floating-circle-position-description = Daireyi geçerli ekranın sağ üst köşesine sıfırlar.
+qwen-code-cli-folder = Qwen Code CLI folder
+folder-with-qwen-exe-qwen-cmd-or-qwen-ps1 = Folder with qwen.exe, qwen.cmd, or qwen.ps1. Leave empty to find it automatically.
+reads-qwen-code-settings-and-local-token-history = Reads Qwen Code settings and local token history without using its credentials.
+qwen-local-data = Qwen local data
+qwen-code-cli = Qwen Code CLI
+found-qwen-code-settings-or-local-history = Found Qwen Code settings or local history.
+qwen-code-settings-and-local-history-not-found = Qwen Code settings and local history were not found.
+reads-deepseek-harness-root-agent-history = Reads root and delegated Agent token usage from local DeepSeek Harness sessions. Seeded sessions are excluded.
+reads-kimi-model-local-agent-history = Reads Kimi model usage from supported local agent histories. Kimi Code sub-agents are excluded.
+reads-domestic-model-local-agent-history = Reads this model family's token usage from supported local agent histories without accessing credentials.
+floating-circle-switch-target = Switch target
+floating-circle-add-second = Add second
+floating-circle-close-this = Close circle
+provider-tab-order = Provider order
+provider-tab-order-description = Click one icon, then its destination, or drag icons to reorder provider pages.
+floating-circle-primary-target = First circle target
+floating-circle-secondary-target = Second circle target
+floating-circle-target-description = Choose the provider account whose remaining quota this circle shows.
+floating-circle-second = Second floating circle
+floating-circle-second-description = Show one optional circle below the first. Both circles move together.
+floating-circle-card-balance = Balance
+floating-circle-card-quota = Quota
+floating-circle-not-authorized = Sign in
+floating-circle-temporarily-unavailable = Try later
+floating-circle-loading-quota = Loading
+floating-circle-no-quota-api = No quota API

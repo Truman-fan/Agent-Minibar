@@ -8,7 +8,7 @@ import { QuotaIndicator } from "./action";
 
 function diagnostic(message: string): void {
   try {
-    appendFileSync(join(tmpdir(), "codex-minibar-streamdeck.log"), `${new Date().toISOString()} ${message}\n`);
+    appendFileSync(join(tmpdir(), "agent-minibar-streamdeck.log"), `${new Date().toISOString()} ${message}\n`);
   } catch {
     // Diagnostics must never prevent the action from starting.
   }

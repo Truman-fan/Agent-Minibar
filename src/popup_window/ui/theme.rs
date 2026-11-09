@@ -870,6 +870,15 @@ impl Palette {
                     (51, 51, 51)
                 }
             }
+            ProviderKind::DeepSeek => (87, 134, 254),
+            ProviderKind::QwenCode => (97, 83, 255),
+            ProviderKind::DeepSeekHarness => (87, 134, 254),
+            ProviderKind::KimiCode => (50, 125, 255),
+            ProviderKind::VolcengineArk => (51, 112, 255),
+            ProviderKind::ZhipuGlm => (47, 103, 255),
+            ProviderKind::MiniMaxCode => (248, 87, 73),
+            ProviderKind::BaiduQianfan => (41, 93, 255),
+            ProviderKind::TencentHunyuan => (27, 113, 255),
         })
     }
 

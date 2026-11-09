@@ -403,18 +403,22 @@ impl WindowsWindow {
             // left a cold-started popup opening beneath other windows.
             (WS_EX_TOOLWINDOW | WS_EX_TOPMOST, WINDOW_STYLE(0x0))
         } else {
-            let mut dwstyle = WS_SYSMENU;
+            let mut dwstyle = WINDOW_STYLE(0);
+
+            if params.has_native_caption_buttons {
+                dwstyle |= WS_SYSMENU;
+            }
 
             if params.is_resizable {
                 dwstyle |= WS_THICKFRAME;
                 // codex-minibar patch: a size-capped window cannot be maximized
                 // (caption double-click, Aero Snap to the top edge, Win+Up).
-                if params.window_max_size.is_none() {
+                if params.has_native_caption_buttons && params.window_max_size.is_none() {
                     dwstyle |= WS_MAXIMIZEBOX;
                 }
             }
 
-            if params.is_minimizable {
+            if params.has_native_caption_buttons && params.is_minimizable {
                 dwstyle |= WS_MINIMIZEBOX;
             }
 
@@ -797,7 +801,12 @@ impl PlatformWindow for WindowsWindow {
     fn zoom(&self) {
         unsafe {
             if IsWindowVisible(self.0.hwnd).as_bool() {
-                ShowWindowAsync(self.0.hwnd, SW_MAXIMIZE).ok().log_err();
+                let command = if IsZoomed(self.0.hwnd).as_bool() {
+                    SW_RESTORE
+                } else {
+                    SW_MAXIMIZE
+                };
+                ShowWindowAsync(self.0.hwnd, command).ok().log_err();
             } else if let Some(status) = self.0.state.borrow_mut().initial_placement.as_mut() {
                 status.state = WindowOpenState::Maximized;
             }

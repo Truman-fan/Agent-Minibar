@@ -1,8 +1,8 @@
 {
-  "name": "codex-minibar-promo",
+  "name": "agent-minibar-promo",
   "private": true,
   "version": "1.0.0",
-  "description": "Remotion compositions for Codex Minibar patch notes and launch video",
+  "description": "Remotion compositions for Agent Minibar patch notes and launch video",
   "scripts": {
     "studio": "remotion studio",
     "render:all": "node render.mjs"
