@@ -1,0 +1,107 @@
+name: Windows portable release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag, for example v1.6.0
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-portable-release-${{ github.ref_name || inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    env:
+      CARGO_NET_GIT_FETCH_WITH_CLI: true
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Verify release version
+        id: version
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $match = Select-String -LiteralPath Cargo.toml -Pattern '^\s*version\s*=\s*"([^"]+)"' | Select-Object -First 1
+          if (-not $match) {
+            throw "Could not read package version from Cargo.toml"
+          }
+          $version = $match.Matches[0].Groups[1].Value
+          if ($env:RELEASE_TAG -ne "v$version") {
+            throw "Release tag '$($env:RELEASE_TAG)' does not match Cargo.toml version 'v$version'."
+          }
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.95.0
+          targets: x86_64-pc-windows-msvc
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: portable-x64
+          cache-on-failure: true
+
+      - name: Fetch dependencies
+        run: cargo fetch --locked
+
+      - name: Build Windows x64 portable ZIP
+        shell: pwsh
+        run: .\build.ps1 -Arch x64 -SkipInstaller
+
+      - name: Generate SHA-256 manifest
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $directory = Join-Path "dist" $env:VERSION
+          $matches = @(Get-ChildItem -LiteralPath $directory -File -Filter "agent-minibar-$($env:VERSION)-x64-portable.zip")
+          if ($matches.Count -ne 1) {
+            throw "Expected exactly one Windows x64 portable ZIP in $directory, found $($matches.Count)."
+          }
+          $zip = $matches[0]
+          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip.FullName).Hash.ToLowerInvariant()
+          "$hash *$($zip.Name)" | Set-Content -LiteralPath (Join-Path $directory "SHA256SUMS") -Encoding utf8NoBOM
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: agent-minibar-${{ steps.version.outputs.version }}-windows-x64-portable
+          path: |
+            dist/${{ steps.version.outputs.version }}/agent-minibar-${{ steps.version.outputs.version }}-x64-portable.zip
+            dist/${{ steps.version.outputs.version }}/SHA256SUMS
+          if-no-files-found: error
+
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $false
+          $directory = Join-Path "dist" $env:VERSION
+          $assets = @(
+            (Join-Path $directory "agent-minibar-$($env:VERSION)-x64-portable.zip"),
+            (Join-Path $directory "SHA256SUMS")
+          )
+          gh release view $env:RELEASE_TAG 2>$null | Out-Null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $env:RELEASE_TAG @assets --clobber
+          } else {
+            gh release create $env:RELEASE_TAG @assets --title "Agent Minibar $($env:VERSION)" --notes-file "data/releases/$($env:VERSION)/release-notes.md" --target $env:GITHUB_SHA
+          }
+          if ($LASTEXITCODE -ne 0) {
+            throw "GitHub release command failed with exit code $LASTEXITCODE"
+          }

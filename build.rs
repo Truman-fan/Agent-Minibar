@@ -12,7 +12,14 @@ fn main() {
     #[cfg(windows)]
     {
         let mut resource = winresource::WindowsResource::new();
-        resource.set_icon("assets/app-icon.ico");
+        resource
+            .set_icon("assets/app-icon.ico")
+            .set("ProductName", "Agent Minibar")
+            .set("FileDescription", "Agent Minibar")
+            .set("CompanyName", "Truman_show")
+            .set("InternalName", "Agent Minibar")
+            .set("OriginalFilename", "agent-minibar.exe")
+            .set("LegalCopyright", "Copyright 2026 Truman_show");
         resource
             .compile()
             .expect("compile Windows application icon");

@@ -244,13 +244,16 @@ credential clears only its sample. A partial HTTP 429 still pauses Claude pollin
 ## Install
 
 1. Open the [latest release](https://github.com/Truman-fan/Agent-Minibar/releases/latest).
-2. Download the installer matching your Windows architecture (`x64` or `arm64`) and run it.
-   The installer is per-user and does not require administrator rights.
-3. Alternatively, download the matching `portable.zip`, extract it, and run
-   `agent-minibar.exe`.
-   The NSIS installer also registers `minibar` as a launch alias for the same app.
+2. The initial community release provides a Windows x64 portable package. Download
+   `agent-minibar-<version>-x64-portable.zip` and verify it against `SHA256SUMS`.
+3. Extract the complete ZIP, then run `agent-minibar.exe`. Do not run the executable from
+   inside the archive or copy it away from the bundled runtime files.
 4. Find the icon in the notification area. If it is hidden, Windows may have tucked it under
    the `^` overflow menu, because apparently that is where delightful UX goes to die.
+
+Windows installers and ARM64 packages will be added in a later release. The current binary is
+unsigned, so Windows may show a SmartScreen warning; confirm the release source and SHA-256
+before running it.
 
 On first run, Agent Minibar discovers Codex automatically. Open **Settings** from the tray
 menu if you need to choose another executable or adjust the tray widgets and notifications.

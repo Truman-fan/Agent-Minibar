@@ -44,26 +44,23 @@ DeepSeek、Qwen Code、DeepSeek Harness、Kimi Code、豆包 / 火山方舟、�
 ### Windows 11 / Windows 10
 
 1. 打开 [GitHub 最新发行版](https://github.com/Truman-fan/Agent-Minibar/releases/latest)。如果 GitHub 访问不便，也可以查看 [Gitee Releases](https://gitee.com/Truman-fan/Agent-Minibar/releases)。
-2. 大多数 Intel 或 AMD 电脑下载：
+2. 当前首个社区版本先提供 Windows x64 便携包，适用于绝大多数 Intel 或 AMD 电脑。下载：
 
    ```text
-   agent-minibar-<版本号>-x64-setup.exe
+   agent-minibar-<版本号>-x64-portable.zip
    ```
 
-3. Windows on ARM（例如部分骁龙电脑）下载：
-
-   ```text
-   agent-minibar-<版本号>-arm64-setup.exe
-   ```
-
-4. 运行安装程序。它按当前用户安装，通常不需要管理员权限。
-5. 启动 Agent Minibar，在系统托盘中找到应用图标；若没有直接显示，请展开任务栏右侧的 `^` 隐藏图标区域。
+3. 对照同一发行版中的 `SHA256SUMS` 核对文件，再完整解压 ZIP。
+4. 运行解压目录中的 `agent-minibar.exe`。不要直接在压缩包内运行，也不要只复制 EXE。
+5. 在系统托盘中找到应用图标；若没有直接显示，请展开任务栏右侧的 `^` 隐藏图标区域。
 
 不知道电脑架构时，打开 Windows 的“设置 → 系统 → 系统信息”，查看“系统类型”。绝大多数普通 Windows 11 电脑应选择 `x64`。
 
+Windows 安装包和 ARM64 包将在后续版本加入。当前程序尚未进行代码签名，Windows 可能显示 SmartScreen 提示；请确认下载来源并核对 SHA-256 后再运行。
+
 ### 免安装便携版
 
-不想安装时，下载对应架构的文件：
+当前提供的文件为：
 
 ```text
 agent-minibar-<版本号>-x64-portable.zip

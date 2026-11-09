@@ -245,10 +245,8 @@ jobs:
           $existing = gh release view $tag --json isDraft 2>$null
           if ($LASTEXITCODE -eq 0 -and $existing) {
             $release = $existing | ConvertFrom-Json
-            if (-not $release.isDraft) {
-              throw "Release $tag already exists and is published. Refusing to overwrite."
-            }
-            Write-Host "Updating draft $tag"
+            $state = if ($release.isDraft) { "draft" } else { "published release" }
+            Write-Host "Updating $state $tag"
             gh release upload $tag @assets --clobber
             if ($LASTEXITCODE -ne 0) {
               throw "gh release upload failed with exit code $LASTEXITCODE"
