@@ -114,4 +114,5 @@ jobs:
             exit 0
           fi
           git commit -m "pack command palette extension ${VERSION}"
+          git pull --rebase origin main
           git push

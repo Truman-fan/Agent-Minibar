@@ -76,4 +76,5 @@ jobs:
             exit 0
           fi
           git commit -m "pack streamdeck plugin ${VERSION}"
+          git pull --rebase origin main
           git push
