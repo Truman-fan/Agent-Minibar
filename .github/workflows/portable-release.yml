@@ -11,6 +11,7 @@ on:
         type: string
 
 permissions:
+  actions: write
   contents: write
 
 concurrency:
@@ -105,3 +106,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw "GitHub release command failed with exit code $LASTEXITCODE"
           }
+
+      # Releases created with GITHUB_TOKEN do not emit another workflow run.
+      # Dispatch explicitly so the Gitee mirror can upload the same assets.
+      - name: Trigger Gitee release mirror
+        shell: pwsh
+        run: gh workflow run gitee-release.yml --ref main -f tag=$env:RELEASE_TAG

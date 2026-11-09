@@ -9,6 +9,7 @@ on:
         default: true
 
 permissions:
+  actions: write
   contents: write
 
 concurrency:
@@ -257,4 +258,16 @@ jobs:
             if ($LASTEXITCODE -ne 0) {
               throw "gh release create failed with exit code $LASTEXITCODE"
             }
+          }
+
+      - name: Mirror published release to Gitee
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $tag = "v$env:VERSION"
+          $release = gh release view $tag --json isDraft | ConvertFrom-Json
+          if (-not $release.isDraft) {
+            gh workflow run gitee-release.yml --ref main -f tag=$tag
+          } else {
+            Write-Host "Release $tag is still a draft; it will be mirrored after publication."
           }
