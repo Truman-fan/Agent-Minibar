@@ -366,11 +366,12 @@ pub(crate) fn provider_mark(
     badge: Option<&crate::instances::Badge>,
     palette: &Palette,
 ) -> Div {
-    let mut mark = div()
-        .relative()
-        .flex_none()
-        .size(px(size))
-        .child(icon(icon_name, size, color));
+    let mut mark = div().relative().flex_none().size(px(size));
+    mark = if icon_name == "doubao" {
+        mark.child(crate::settings_window::kit::image("color/doubao.svg", size))
+    } else {
+        mark.child(icon(icon_name, size, color))
+    };
     if let Some(badge) = badge {
         let height = (size * 0.62).clamp(9.0, 14.0);
         mark = mark.child(

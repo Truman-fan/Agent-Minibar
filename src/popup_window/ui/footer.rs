@@ -292,6 +292,17 @@ impl PopupRoot {
             + edit_presence
             + f32::from(u8::from(self.ui.update_version.is_some()));
         let floating_slot = crate::popup_window::floating_circle_slot().filter(|slot| *slot < 2);
+        let doubao = floating_slot.and_then(|slot| {
+            let bound = self
+                .ui
+                .floating_circle_slots
+                .get(slot)
+                .and_then(|slot| slot.provider());
+            self.ui.enabled_providers().into_iter().find(|&provider| {
+                provider.kind() == crate::settings::ProviderKind::VolcengineArk
+                    && Some(provider) != bound
+            })
+        });
         let floating_action_count = match floating_slot {
             Some(0) if self.ui.floating_circle_slots.len() < 2 => 2.0,
             Some(0) => 1.0,
@@ -299,7 +310,8 @@ impl PopupRoot {
             _ => 0.0,
         };
         let action_gap = size.action_spacing() as f32;
-        let icon_action_count = base_icon_action_count + floating_action_count;
+        let icon_action_count =
+            base_icon_action_count + floating_action_count + f32::from(u8::from(doubao.is_some()));
         let action_width =
             button * icon_action_count + EXIT_BUTTON_WIDTH + action_gap * icon_action_count;
         let viewport_width = capsule_width
@@ -420,6 +432,39 @@ impl PopupRoot {
             );
         }
         if let Some(slot) = floating_slot {
+            if let Some(provider) = doubao {
+                actions = actions
+                    .child(self.render_action_button(
+                        "floating-switch-doubao",
+                        "doubao",
+                        crate::i18n::tr("floating-circle-switch-doubao").into(),
+                        button,
+                        size.icon_glyph_size() as f32,
+                        false,
+                        cx.listener(move |this, _: &ClickEvent, _, cx| {
+                            this.persist(
+                                cx,
+                                move |ui| {
+                                    let target =
+                                        crate::settings::FloatingCircleSlot::for_provider(provider);
+                                    ui.floating_circle_slots.resize_with(
+                                        ui.floating_circle_slots.len().max(slot + 1),
+                                        Default::default,
+                                    );
+                                    ui.floating_circle_slots[slot] = target;
+                                },
+                                move |settings| {
+                                    if settings.enabled_providers().contains(&provider) {
+                                        settings.set_floating_circle_provider(slot, provider);
+                                    }
+                                },
+                            );
+                            crate::popup_window::request_floating_provider_view(provider, slot);
+                        }),
+                        cx,
+                    ))
+                    .child(div().w(px(gap)).flex_none());
+            }
             actions = actions
                 .child(self.render_action_button(
                     if slot == 0 {
@@ -769,13 +814,17 @@ impl PopupRoot {
         if let Some(layer) = components::hover_layer(&palette, hover, 6.0) {
             element = element.child(layer);
         }
-        element
-            .child(icon(
+        let mark = if glyph_name == "doubao" {
+            crate::settings_window::kit::image("color/doubao.svg", glyph).into_any_element()
+        } else {
+            icon(
                 glyph_name,
                 glyph,
                 palette.chrome_icon.mix(palette.accent, emphasis),
-            ))
+            )
             .into_any_element()
+        };
+        element.child(mark).into_any_element()
     }
 
     fn render_exit_button(&mut self, height: f32, cx: &mut Context<Self>) -> AnyElement {

@@ -56,8 +56,9 @@ continue to publish normally.
 
 ## Floating circle (Windows)
 
-Enable **Settings > Customize > Floating circle** for a compact 96 by 122 DIP
-quota panel that does not depend on Explorer's taskbar. It remains topmost when
+New Windows installations start with **Settings > Customize > Floating circle**
+enabled. Existing installations retain their saved on/off choice. The compact
+96 by 122 DIP quota panel does not depend on Explorer's taskbar and remains topmost when
 the taskbar is auto-hidden or unavailable. The first visible configured taskbar
 widget supplies its provider and indicators; when no taskbar widget is
 configured, the first enabled provider supplies the defaults. Two thick status
@@ -74,7 +75,25 @@ state, or the absence of a quota API. Consumption totals never become quota
 rings, and an unavailable read is never presented as 0%. Cached quota values
 remain visible but dim and receive a warning marker after a failed refresh.
 The panel keeps at most two indicators and follows the taskbar's light/dark
-appearance.
+appearance. Customize exposes 40–100% surface opacity. The information card
+follows the circle opacity by default and can be adjusted independently; quota
+progress, provider marks, labels and values do not fade with the surface. The
+provider glyph is opaque, with a fine two-tone outline around its silhouette
+and a transparent center behind it. Light
+background enhancement is enabled by default and adds a paired keyline around
+the neutral rings and cards.
+
+A red light below the quota card summarizes confirmed Codex model reroutes
+for the circle's profile. It counts conversations. Open the detail card to
+see the requested and redirected model, the official reason, and whether the
+round has ended. A confirmed notice remains visible until marked as viewed.
+
+Live monitoring requires an already running shared Codex App Server with the
+default control socket for that profile. For example, a compatible CLI can
+connect using `codex --remote unix://` to an App Server running with
+`codex app-server --listen unix://` under the same `CODEX_HOME`.
+Minibar does not start a server or send model prompts. Standalone sessions
+without shared event transport show the unavailable status in details.
 
 One floating circle is shown by default. An optional second circle can be
 enabled from Customize or from the first circle's detail card. The circles are
@@ -85,20 +104,35 @@ provider account. Agents, child Agents and CLI sessions can contribute to
 separate usage statistics, but are never floating-circle targets and never
 create circles automatically.
 
+On Windows, an automatically detected Codex account pair gives the desktop
+account priority when the first circle follows the default Codex target.
+Adding a second circle then offers the separate Codex CLI login by default.
+An explicitly selected target takes precedence. Detection at startup requires
+both installations, the standard desktop profile, and an independent CLI
+`CODEX_HOME` inherited by Minibar with a different ChatGPT login. Native clients
+sharing one login have one target. When an override is private to a terminal,
+add a Codex instance in **Settings > Providers** and point **Config folder**
+at that terminal's `CODEX_HOME`, then select the instance under **Customize**.
+
 Drag the circle to move it across monitors. Releasing a drag saves its physical
 screen origin immediately. **Reset position** places it at the upper-right of
-the display containing the pointer. A click toggles the ordinary popup and uses
-the taskbar click preference to select Home or the provider tab, including while
-Settings is open. The popup footer's red **Exit** button shuts the application
+the display containing the pointer. Left-click a circle to open its provider's
+detail card, click the other circle to switch cards, or click the current circle
+again to close the detail card. The detail card and Settings cover the floating
+circles where they overlap. A circle returns to the topmost band when Settings
+moves away, minimizes or closes. The popup footer's red **Exit** button shuts the application
 down through the normal worker and persistence cleanup path. Right-clicking
 opens Settings. The lower quota card uses a dark translucent surface, compact
 blue and green label capsules, a centered divider, and a paired keyline so its
 semi-transparent values remain legible over both white documents and dark
-editors. Wide Settings windows reserve an animated strip on
+editors. Quota numbers use a fine dark outline, which switches to light gray
+for very dark quota colors. Wide Settings windows reserve an animated strip on
 the screen-right side while the circle is enabled, keeping page controls clear
 of the default floating position after maximize. The native window unions a
-circular ring region with the lower rounded card, so transparent space outside
-those two shapes neither blocks nor receives clicks.
+circular ring region with the lower rounded card and, only while present, the
+alert card. Transparent space outside those shapes neither blocks nor receives
+clicks. With two circles, each native window uses its own current height, so an
+alert on one account does not create a blank gap inside the other.
 
 When the popup was opened by a floating circle, its footer adds **Switch
 target**. This opens Customize directly at the visible target selectors. The

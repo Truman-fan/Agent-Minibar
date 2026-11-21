@@ -1,7 +1,7 @@
 //! Account attribution is an observation, not billing evidence: rollouts do
 //! not identify the account. Never infer ownership from a plan or display name.
 use super::*;
-use crate::usage::codex_home;
+use crate::instances::primary_codex_home;
 
 pub(crate) const UNKNOWN: &str = "unattributed";
 const STATE: &str = "codex.accounts.v1";
@@ -145,15 +145,15 @@ fn decode_auth(bytes: &[u8], after: std::time::SystemTime) -> Observation {
 
 /// Raw observation for attribution. `None` is both logged-out and a torn
 /// `auth.json` read; callers must not treat that as a new account.
-pub(crate) fn identity() -> Option<Identity> {
-    match observe_auth(&codex_home().join("auth.json")) {
+pub(crate) fn identity_in(home: &Path) -> Option<Identity> {
+    match observe_auth(&home.join("auth.json")) {
         Observation::Account(identity) => Some(identity),
         Observation::LoggedOut | Observation::Uncertain => None,
     }
 }
 
 pub(crate) fn current_id() -> String {
-    id_from_observation(observe_auth(&codex_home().join("auth.json")))
+    id_from_observation(observe_auth(&primary_codex_home().join("auth.json")))
 }
 
 /// Last account observed by the usage workers. Render paths must use this
@@ -165,7 +165,7 @@ pub(crate) fn cached_current_id() -> String {
 /// Stable identity for the usage worker. `None` means the file was unreadably
 /// mid-update; keep the previous account instead of flashing logged-out.
 pub(crate) fn poll_identity() -> Option<String> {
-    poll_from_observation(observe_auth(&codex_home().join("auth.json")))
+    poll_from_observation(observe_auth(&primary_codex_home().join("auth.json")))
 }
 
 fn id_from_observation(observed: Observation) -> String {
@@ -548,10 +548,10 @@ impl ProviderStore {
     }
 
     pub(crate) fn initialize_codex_attribution(&self) -> Result<Attribution> {
-        self.initialize_codex_attribution_at(identity(), Utc::now())
+        self.initialize_codex_attribution_at(identity_in(&primary_codex_home()), Utc::now())
     }
 
-    fn initialize_codex_attribution_at(
+    pub(crate) fn initialize_codex_attribution_at(
         &self,
         observed: Option<Identity>,
         now: DateTime<Utc>,

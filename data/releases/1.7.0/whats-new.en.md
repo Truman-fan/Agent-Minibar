@@ -1,0 +1,3 @@
+- WorkBuddy support and a selectable Doubao icon.
+- Clearer floating quota values and separate opacity controls for the circle and quota card.
+- Two floating circles can show separate Codex desktop and CLI accounts. Confirmed Codex model reroutes are marked with a red indicator.

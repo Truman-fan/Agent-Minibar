@@ -89,6 +89,8 @@ fn source(name: &str) -> Option<&'static str> {
         "qwen" => include_str!("../../../assets/icons/qwen-iconify.svg"),
         "kimi" => include_str!("../../../assets/icons/kimi-iconify.svg"),
         "volcengine" => include_str!("../../../assets/icons/volcengine-iconify.svg"),
+        "doubao" => include_str!("../../../assets/icons/doubao-color.svg"),
+        "workbuddy" => include_str!("../../../assets/icons/workbuddy.svg"),
         "zhipu" => include_str!("../../../assets/icons/zhipu-iconify.svg"),
         "minimax" => include_str!("../../../assets/icons/minimax-iconify.svg"),
         "baidu" => include_str!("../../../assets/icons/baidu-iconify.svg"),
@@ -219,6 +221,7 @@ pub(crate) fn normalize_svg(svg: &str) -> String {
 /// Full-color assets painted with `img` (their own colors are kept).
 fn color_source(name: &str) -> Option<&'static [u8]> {
     Some(match name {
+        "doubao" => include_bytes!("../../../assets/icons/doubao-color.svg"),
         "alert-badge-24" => include_bytes!("../../../assets/icons/fluent-color-alert-badge-24.svg"),
         "apps-24" => include_bytes!("../../../assets/icons/fluent-color-apps-24.svg"),
         "apps-list-24" => include_bytes!("../../../assets/icons/fluent-color-apps-list-24.svg"),

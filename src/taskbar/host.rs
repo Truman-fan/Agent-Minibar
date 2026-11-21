@@ -390,6 +390,7 @@ fn context_menu(owner: HWND, target: MenuTarget) -> Option<Action> {
                 page: target.page,
                 dismiss_on_outside_click: false,
                 floating_slot: None,
+                reroute_alert: false,
             }),
             MENU_EDIT => id.map(Action::Edit),
             MENU_SETTINGS => Some(Action::Settings),
@@ -1604,6 +1605,7 @@ impl Host {
             page: self.click_page(),
             dismiss_on_outside_click: false,
             floating_slot: None,
+            reroute_alert: false,
         })
     }
 }

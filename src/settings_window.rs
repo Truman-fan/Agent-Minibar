@@ -413,6 +413,8 @@ fn open_settings_window(state: Arc<AppState>, cx: &mut AsyncApp) {
             cx,
         );
         cx.open_window(options, |window, cx| {
+            #[cfg(windows)]
+            crate::popup_window::ui::win32::track_settings_layer(window);
             cx.new(|cx| window::SettingsWindow::new(state, window, cx))
         })
     });

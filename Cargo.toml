@@ -1,6 +1,6 @@
 [package]
 name = "agent-minibar"
-version = "1.6.0"
+version = "1.7.0"
 edition = "2024"
 authors = ["Truman_show"]
 description = "Windows and Linux floating quota companion for AI agents and providers"
@@ -32,6 +32,7 @@ serde_json = "1"
 sha2 = "0.10"
 toml = "0.9"
 tempfile = "3"
+tungstenite = { version = "0.30", default-features = false, features = ["handshake"] }
 ureq = { version = "2", default-features = false, features = ["tls", "native-tls"] }
 rusqlite = { version = "0.37", features = ["bundled"] }
 # GitHub release archives and VSIX packages use Stored/Deflate entries. The

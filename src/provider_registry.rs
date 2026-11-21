@@ -454,6 +454,18 @@ pub const PROVIDERS: &[ProviderDescriptor] = &[
         metrics: &[],
         default_tray_metrics: &[],
     },
+    ProviderDescriptor {
+        kind: ProviderKind::WorkBuddy,
+        id: "workbuddy",
+        display_name: "WorkBuddy",
+        icon: "workbuddy",
+        brand_rgb: (47, 120, 247),
+        supports_activation: false,
+        include_in_total_spend: false,
+        supports_multiple_instances: false,
+        metrics: &[],
+        default_tray_metrics: &[],
+    },
 ];
 
 pub fn descriptor(provider: ProviderKind) -> &'static ProviderDescriptor {
@@ -470,6 +482,12 @@ pub fn apply_logo_settings(replace_chatgpt_logo_with_codex: bool) {
     REPLACE_CHATGPT_LOGO_WITH_CODEX.store(replace_chatgpt_logo_with_codex, Ordering::Relaxed);
 }
 
+static USE_DOUBAO_LOGO: AtomicBool = AtomicBool::new(true);
+
+pub fn apply_doubao_logo(enabled: bool) {
+    USE_DOUBAO_LOGO.store(enabled, Ordering::Relaxed);
+}
+
 /// Live provider mark for UI. Canonical asset ids stay on
 /// [`ProviderDescriptor::icon`]; this is what every surface should paint.
 pub fn icon(provider: ProviderKind) -> &'static str {
@@ -477,6 +495,7 @@ pub fn icon(provider: ProviderKind) -> &'static str {
         ProviderKind::Codex if !REPLACE_CHATGPT_LOGO_WITH_CODEX.load(Ordering::Relaxed) => {
             "chatgpt"
         }
+        ProviderKind::VolcengineArk if USE_DOUBAO_LOGO.load(Ordering::Relaxed) => "doubao",
         _ => descriptor(provider).icon,
     }
 }
@@ -506,6 +525,7 @@ pub fn light_surface_brand_rgb(provider: ProviderKind) -> (u8, u8, u8) {
         ProviderKind::MiniMaxCode => (215, 61, 52),
         ProviderKind::BaiduQianfan => (35, 76, 218),
         ProviderKind::TencentHunyuan => (24, 92, 215),
+        ProviderKind::WorkBuddy => (34, 89, 205),
     }
 }
 
@@ -580,6 +600,7 @@ pub fn supports_banked_resets(provider: ProviderKind) -> bool {
             | ProviderKind::MiniMaxCode
             | ProviderKind::BaiduQianfan
             | ProviderKind::TencentHunyuan
+            | ProviderKind::WorkBuddy
     )
 }
 
@@ -599,6 +620,7 @@ pub fn supports_credits(provider: ProviderKind) -> bool {
             | ProviderKind::MiniMaxCode
             | ProviderKind::BaiduQianfan
             | ProviderKind::TencentHunyuan
+            | ProviderKind::WorkBuddy
     )
 }
 
@@ -606,7 +628,10 @@ pub fn supports_credits(provider: ProviderKind) -> bool {
 pub fn supports_usage_stats(provider: ProviderKind) -> bool {
     !matches!(
         provider,
-        ProviderKind::Antigravity | ProviderKind::Grok | ProviderKind::Kiro // DeepSeek combines official balance with local model usage.
+        ProviderKind::Antigravity
+            | ProviderKind::Grok
+            | ProviderKind::Kiro
+            | ProviderKind::WorkBuddy
     )
 }
 
@@ -879,21 +904,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn live_icon_follows_codex_logo_setting_for_every_provider() {
-        apply_logo_settings(false);
-        for provider in ProviderKind::ALL {
-            let expected = match provider {
-                ProviderKind::Codex => "chatgpt",
-                _ => descriptor(provider).icon,
-            };
-            assert_eq!(icon(provider), expected);
+    fn live_icons_follow_codex_and_doubao_settings_independently() {
+        for codex in [false, true] {
+            apply_logo_settings(codex);
+            for doubao in [false, true] {
+                apply_doubao_logo(doubao);
+                for provider in ProviderKind::ALL {
+                    let expected = match provider {
+                        ProviderKind::Codex if !codex => "chatgpt",
+                        ProviderKind::VolcengineArk if doubao => "doubao",
+                        _ => descriptor(provider).icon,
+                    };
+                    assert_eq!(icon(provider), expected);
+                }
+            }
         }
-        apply_logo_settings(true);
-        for provider in ProviderKind::ALL {
-            assert_eq!(icon(provider), descriptor(provider).icon);
-        }
         apply_logo_settings(false);
-        assert_eq!(icon(ProviderKind::Codex), "chatgpt");
+        apply_doubao_logo(true);
     }
 
     #[test]

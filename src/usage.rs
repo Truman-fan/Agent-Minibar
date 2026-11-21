@@ -254,9 +254,11 @@ pub fn refresh_usage_statistics(
     if !provider.is_primary() {
         return refresh_instance_usage_statistics(provider, home, history_days);
     }
-    let before = store::codex_accounts::identity();
-    let attribution = store::with_store(|store| store.initialize_codex_attribution())?;
     let codex_root = home.map_or_else(codex_home, Path::to_path_buf);
+    let before = store::codex_accounts::identity_in(&codex_root);
+    let attribution = store::with_store(|store| {
+        store.initialize_codex_attribution_at(before.clone(), Utc::now())
+    })?;
     let mut cache = store::with_store(|store| store.load_codex_cache(provider))?;
     if !attribution.ready {
         cache.files.clear();
@@ -302,7 +304,7 @@ pub fn refresh_usage_statistics(
     }
     cache.version = CODEX_CACHE_VERSION;
     let end = Utc::now();
-    let after = store::codex_accounts::identity();
+    let after = store::codex_accounts::identity_in(&codex_root);
     // Commit attribution before offsets: a failed subsequent cache save can
     // replay these events safely, but can never skip an uncommitted event.
     store::with_store(|store| {

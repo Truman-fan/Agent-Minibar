@@ -48,43 +48,25 @@ pub(crate) struct Config {
     pub(crate) colored_icons: bool,
     pub(crate) floating_circle_enabled: bool,
     pub(crate) floating_circle_colors: crate::settings::FloatingCircleColors,
+    pub(crate) floating_circle_appearance: crate::settings::FloatingCircleAppearance,
+    pub(crate) show_reroutes: bool,
     pub(crate) floating_circle_position: Option<crate::settings::PopupPosition>,
     pub(crate) floating_circle_items: Vec<FloatingCircleItem>,
 }
 
 impl Config {
     fn from_settings(settings: &Settings) -> Self {
-        let enabled = settings.enabled_providers();
-        let first_visible = settings.taskbar.widgets.iter().find_map(|widget| {
-            widget
-                .provider()
-                .filter(|provider| enabled.contains(provider))
-                .map(|provider| (provider, widget.clone()))
-        });
         let mut items = Vec::new();
-        for (index, configured) in settings.floating_circle_slots.iter().take(2).enumerate() {
-            let resolved = configured
-                .provider()
-                .filter(|provider| enabled.contains(provider))
-                .or_else(|| {
-                    (index == 0)
-                        .then(|| first_visible.as_ref().map(|(provider, _)| *provider))
-                        .flatten()
-                })
-                .or_else(|| (index == 0).then(|| enabled.first().copied()).flatten());
-            let Some(provider) = resolved else { continue };
+        for index in 0..2 {
+            let Some(provider) = settings.floating_circle_target(index) else {
+                continue;
+            };
             let mut widget = settings
                 .taskbar
                 .widgets
                 .iter()
                 .find(|widget| widget.provider() == Some(provider))
                 .cloned()
-                .or_else(|| {
-                    first_visible
-                        .as_ref()
-                        .filter(|(candidate, _)| *candidate == provider)
-                        .map(|(_, widget)| widget.clone())
-                })
                 .unwrap_or_else(|| crate::settings::TaskbarWidget::for_provider(provider));
             widget.style = crate::settings::TaskbarWidgetStyle::Nested;
             widget.indicators.truncate(2);
@@ -96,8 +78,7 @@ impl Config {
             widget.show_labels = false;
             widget.show_values = false;
             widget.reset = crate::settings::TaskbarResetDisplay::Off;
-            let mut slot = configured.clone();
-            slot.provider_id = provider.id().into();
+            let slot = FloatingCircleSlot::for_provider(provider);
             items.push(FloatingCircleItem { slot, widget });
         }
         Self {
@@ -105,6 +86,8 @@ impl Config {
             colored_icons: settings.use_colored_provider_icons,
             floating_circle_enabled: settings.floating_circle_enabled,
             floating_circle_colors: settings.floating_circle_colors,
+            floating_circle_appearance: settings.floating_circle_appearance,
+            show_reroutes: settings.floating_alerts.capability_risk_enabled,
             floating_circle_position: settings.floating_circle_position.clone(),
             floating_circle_items: items,
         }
@@ -124,6 +107,7 @@ pub enum Action {
         dismiss_on_outside_click: bool,
         /// Which compact floating-circle slot opened the detail card.
         floating_slot: Option<usize>,
+        reroute_alert: bool,
     },
     /// Open Settings on the editor of this widget.
     Edit(String),
@@ -210,6 +194,19 @@ pub(crate) fn request_second_floating_circle(enabled: bool) {
 #[cfg(windows)]
 pub(crate) fn point_is_floating_circle(x: i32, y: i32) -> bool {
     floating::contains_screen_point(x, y)
+}
+
+#[cfg(windows)]
+pub(crate) use floating::CoveringWindow;
+
+#[cfg(windows)]
+pub(crate) fn sync_floating_circle_window_order() {
+    floating::request_window_order();
+}
+
+pub(crate) fn publish_reroute_update() {
+    #[cfg(windows)]
+    floating::publish(floating::Message::Reroutes);
 }
 
 /// Publishes the latest settings. The host thread starts on the first

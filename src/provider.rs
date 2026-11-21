@@ -342,6 +342,12 @@ fn start_driver_worker(
                 false
             )
         }
+        ProviderKind::WorkBuddy => start_worker!(
+            crate::workbuddy::WorkBuddy,
+            crate::workbuddy::WorkBuddy,
+            crate::workbuddy::WorkBuddy,
+            false
+        ),
         ProviderKind::DeepSeekHarness
         | ProviderKind::KimiCode
         | ProviderKind::VolcengineArk
@@ -471,6 +477,7 @@ fn provider_activation_path(provider: ProviderId, base_path: PathBuf) -> PathBuf
         ProviderKind::MiniMaxCode => base_path.with_file_name("activation-minimax-code.toml"),
         ProviderKind::BaiduQianfan => base_path.with_file_name("activation-baidu-qianfan.toml"),
         ProviderKind::TencentHunyuan => base_path.with_file_name("activation-tencent-hunyuan.toml"),
+        ProviderKind::WorkBuddy => base_path.with_file_name("activation-workbuddy.toml"),
     }
 }
 

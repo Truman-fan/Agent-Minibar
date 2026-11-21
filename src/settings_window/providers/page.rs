@@ -215,6 +215,21 @@ impl SettingsWindow {
             }));
             sections.push(div().h(px(4.0)).into_any_element());
         }
+        if instance.driver == ProviderKind::VolcengineArk {
+            sections.push(kit::card_of(k, |k| {
+                vec![kit::toggle_row(
+                    k,
+                    "doubao-logo",
+                    crate::i18n::tr("use-doubao-logo"),
+                    None,
+                    self.settings.use_doubao_logo,
+                    Self::h(cx, |this, value: bool, _, cx| {
+                        crate::provider_registry::apply_doubao_logo(value);
+                        this.edit(cx, move |s| s.use_doubao_logo = value)
+                    }),
+                )]
+            }));
+        }
         sections.push(self.popup_cards_section(&instance, k, cx));
         let dim = k.fx.toggle(
             fx::key(("provider-dim", provider.id())),

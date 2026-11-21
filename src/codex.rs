@@ -34,7 +34,10 @@ const WHAM_USAGE_URL: &str = "https://chatgpt.com/backend-api/wham/usage";
 const WHAM_RESET_CREDITS_URL: &str =
     "https://chatgpt.com/backend-api/wham/rate-limit-reset-credits";
 
+#[cfg(windows)]
+pub(crate) mod profile_discovery;
 pub(crate) mod profile_oauth;
+pub(crate) mod reroutes;
 
 /// Removes leftovers of the former temporary sign-in folders.
 pub fn cleanup_abandoned_logins() -> Result<()> {
@@ -52,10 +55,15 @@ pub struct CodexClient {
     /// Reused across polls so each one does not build a new Schannel
     /// credential and TLS handshake.
     oauth_agent: OnceLock<ureq::Agent>,
+    reroute_monitor: Option<reroutes::Monitor>,
 }
 
 impl LimitProvider for CodexClient {
     fn read_limits(&mut self) -> Result<RateLimits> {
+        if self.reroute_monitor.is_none() {
+            let home = self.home.clone().unwrap_or_else(usage::codex_home);
+            self.reroute_monitor = reroutes::Monitor::start(self.provider, &self.executable, &home);
+        }
         let result = self.read_rate_limits();
         self.rate_limited |= result
             .as_ref()
@@ -192,6 +200,7 @@ impl CodexClient {
             home: None,
             rate_limited: false,
             oauth_agent: OnceLock::new(),
+            reroute_monitor: None,
         }
     }
 
@@ -204,7 +213,7 @@ impl CodexClient {
     }
 
     fn tracks_account_switches(&self) -> bool {
-        self.provider.is_primary() && self.home.is_none()
+        self.provider.is_primary()
     }
 
     fn oauth_agent(&self) -> Result<ureq::Agent> {
@@ -244,7 +253,10 @@ impl CodexClient {
         let auth = auth_json_path(self.home.as_deref());
         let credentials = load_oauth_credentials(&auth)?;
         let mut limits = self.read_credentials(&self.oauth_agent()?, &credentials)?;
-        limits.account_name = local_account_name(&auth);
+        limits.account_name = credentials
+            .id_token
+            .as_deref()
+            .and_then(account_name_from_id_token);
         Ok(limits)
     }
 
@@ -423,33 +435,34 @@ impl std::error::Error for OAuthUnauthorized {}
 struct OAuthCredentials {
     access_token: String,
     account_id: Option<String>,
+    id_token: Option<String>,
 }
 
 #[derive(Deserialize)]
 struct IdTokenClaims {
     name: Option<String>,
     email: Option<String>,
+    #[cfg(windows)]
+    sub: Option<String>,
 }
 
-fn load_oauth_credentials(path: &Path) -> Result<OAuthCredentials> {
+fn load_auth_tokens(path: &Path) -> Result<AuthTokens> {
     let contents = fs::read(path).with_context(|| format!("read {}", path.display()))?;
     let auth: AuthFile =
         serde_json::from_slice(&contents).with_context(|| format!("parse {}", path.display()))?;
-    let tokens = auth
-        .tokens
-        .context("Codex auth.json has no OAuth tokens; run `codex login`")?;
-    let access_token = tokens
-        .access_token
-        .map(|value| value.trim().to_owned())
-        .filter(|value| !value.is_empty())
+    auth.tokens
+        .context("Codex auth.json has no OAuth tokens; run `codex login`")
+}
+
+fn load_oauth_credentials(path: &Path) -> Result<OAuthCredentials> {
+    let tokens = load_auth_tokens(path)?;
+    let access_token = non_empty(tokens.access_token)
         .context("Codex auth.json has no access token; run `codex login`")?;
-    let account_id = tokens
-        .account_id
-        .map(|value| value.trim().to_owned())
-        .filter(|value| !value.is_empty());
+    let account_id = non_empty(tokens.account_id);
     Ok(OAuthCredentials {
         access_token,
         account_id,
+        id_token: tokens.id_token,
     })
 }
 
@@ -459,17 +472,19 @@ fn auth_json_path(home: Option<&Path>) -> PathBuf {
 }
 
 fn local_account_name(auth: &Path) -> Option<String> {
-    let contents = fs::read(auth).ok()?;
-    let auth: AuthFile = serde_json::from_slice(&contents).ok()?;
-    let token = auth.tokens?.id_token?;
+    let token = load_auth_tokens(auth).ok()?.id_token?;
     account_name_from_id_token(&token)
 }
 
 fn account_name_from_id_token(token: &str) -> Option<String> {
+    let claims = decode_id_token(token)?;
+    non_empty(claims.name).or_else(|| non_empty(claims.email))
+}
+
+fn decode_id_token(token: &str) -> Option<IdTokenClaims> {
     let payload = token.split('.').nth(1)?;
     let decoded = URL_SAFE_NO_PAD.decode(payload).ok()?;
-    let claims: IdTokenClaims = serde_json::from_slice(&decoded).ok()?;
-    non_empty(claims.name).or_else(|| non_empty(claims.email))
+    serde_json::from_slice(&decoded).ok()
 }
 
 fn non_empty(value: Option<String>) -> Option<String> {
@@ -999,7 +1014,9 @@ fn command_for_codex(
     };
     if let Some(home) = home {
         command.env("CODEX_HOME", home);
-        command.env_remove("OPENAI_API_KEY");
+        for key in ["OPENAI_API_KEY", "CODEX_ACCESS_TOKEN", "CODEX_AUTH_TOKEN"] {
+            command.env_remove(key);
+        }
     }
     #[cfg(windows)]
     {

@@ -30,20 +30,24 @@ use windows_sys::Win32::{
             EVENT_SYSTEM_FOREGROUND, FindWindowExW, GA_ROOT, GWL_EXSTYLE, GWL_STYLE, GetAncestor,
             GetClassNameW, GetCursorPos, GetWindowLongPtrW, GetWindowRect, HTCAPTION, HTCLIENT,
             HWND_TOPMOST, IDC_SIZENS, LoadCursorW, MA_NOACTIVATE, SW_HIDE, SW_SHOWNOACTIVATE,
-            SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE,
-            SWP_NOZORDER, SetCursor, SetForegroundWindow, SetWindowLongPtrW, SetWindowPos,
-            SetWindowTextW, ShowWindow, WINEVENT_OUTOFCONTEXT, WINEVENT_SKIPOWNPROCESS,
-            WM_CAPTURECHANGED, WM_DISPLAYCHANGE, WM_DPICHANGED, WM_ENTERSIZEMOVE, WM_EXITSIZEMOVE,
-            WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEACTIVATE, WM_MOUSEMOVE, WM_NCCALCSIZE,
-            WM_NCHITTEST, WM_NCLBUTTONDBLCLK, WM_SETCURSOR, WM_SETTINGCHANGE, WS_CAPTION,
-            WS_EX_APPWINDOW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_NOREDIRECTIONBITMAP,
-            WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_POPUP, WS_SYSMENU,
-            WS_THICKFRAME, WindowFromPoint,
+            SWP_FRAMECHANGED, SWP_HIDEWINDOW, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER,
+            SWP_NOSIZE, SWP_NOZORDER, SWP_SHOWWINDOW, SetCursor, SetForegroundWindow,
+            SetWindowLongPtrW, SetWindowPos, SetWindowTextW, ShowWindow, WINDOWPOS,
+            WINEVENT_OUTOFCONTEXT, WINEVENT_SKIPOWNPROCESS, WM_ACTIVATE, WM_CAPTURECHANGED,
+            WM_DISPLAYCHANGE, WM_DPICHANGED, WM_ENTERSIZEMOVE, WM_EXITSIZEMOVE, WM_LBUTTONDOWN,
+            WM_LBUTTONUP, WM_MOUSEACTIVATE, WM_MOUSEMOVE, WM_NCCALCSIZE, WM_NCDESTROY,
+            WM_NCHITTEST, WM_NCLBUTTONDBLCLK, WM_SETCURSOR, WM_SETTINGCHANGE, WM_WINDOWPOSCHANGED,
+            WS_CAPTION, WS_EX_APPWINDOW, WS_EX_LAYERED, WS_EX_NOACTIVATE,
+            WS_EX_NOREDIRECTIONBITMAP, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_MAXIMIZEBOX,
+            WS_MINIMIZEBOX, WS_POPUP, WS_SYSMENU, WS_THICKFRAME, WindowFromPoint,
         },
     },
 };
 
+use crate::taskbar::{CoveringWindow, sync_floating_circle_window_order};
+
 const SUBCLASS_ID: usize = 0x434D_4250; // "CMBP"
+const SETTINGS_LAYER_SUBCLASS_ID: usize = 0x434D_4253;
 pub(crate) const SHOW_MESSAGE: u32 = 0x8000 + 0x034D;
 /// A second launch finds the running popup by this title.
 pub(crate) const POPUP_TITLE: &str = "Agent Minibar";
@@ -190,6 +194,9 @@ unsafe extern "system" fn popup_subclass_proc(
     _data: usize,
 ) -> LRESULT {
     match message {
+        WM_ACTIVATE | WM_WINDOWPOSCHANGED | WM_NCDESTROY => unsafe {
+            covering_window_event(CoveringWindow::QuotaCard, hwnd, message, wparam, lparam)
+        },
         WM_SETCURSOR => {
             let (x, y, _) = pointer(hwnd);
             if HEIGHT_DRAG.get().is_some()
@@ -310,6 +317,7 @@ pub(crate) fn configure(hwnd: HWND) {
         SetWindowTextW(hwnd, title.as_ptr());
     }
     restyle(hwnd);
+    CoveringWindow::QuotaCard.track(hwnd);
     unsafe {
         // The popup can stay open for a long time (e.g. as the live preview
         // beside Settings). Another topmost window that takes the foreground
@@ -341,6 +349,59 @@ unsafe extern "system" fn toast_subclass_proc(
         // Clicking a notification never steals focus from the user's app.
         WM_MOUSEACTIVATE => MA_NOACTIVATE as LRESULT,
         _ => unsafe { DefSubclassProc(hwnd, message, wparam, lparam) },
+    }
+}
+
+unsafe extern "system" fn settings_layer_proc(
+    hwnd: HWND,
+    message: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+    _id: usize,
+    _data: usize,
+) -> LRESULT {
+    unsafe { covering_window_event(CoveringWindow::Settings, hwnd, message, wparam, lparam) }
+}
+
+unsafe fn covering_window_event(
+    window: CoveringWindow,
+    hwnd: HWND,
+    message: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+) -> LRESULT {
+    if message == WM_NCDESTROY {
+        window.forget(hwnd);
+    }
+    let order_changed = match message {
+        WM_ACTIVATE => wparam & 0xffff != 0,
+        WM_WINDOWPOSCHANGED => {
+            unsafe { (lparam as *const WINDOWPOS).as_ref() }.is_some_and(|position| {
+                const KEEP_POSITION: u32 = SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER;
+                position.flags & KEEP_POSITION != KEEP_POSITION
+                    || position.flags & (SWP_SHOWWINDOW | SWP_HIDEWINDOW) != 0
+            })
+        }
+        _ => false,
+    };
+    let result = unsafe { DefSubclassProc(hwnd, message, wparam, lparam) };
+    if order_changed {
+        sync_floating_circle_window_order();
+    }
+    result
+}
+
+pub(crate) fn track_settings_layer(window: &gpui::Window) {
+    if let Some(hwnd) = hwnd_from_window(window) {
+        unsafe {
+            SetWindowSubclass(
+                hwnd,
+                Some(settings_layer_proc),
+                SETTINGS_LAYER_SUBCLASS_ID,
+                0,
+            )
+        };
+        CoveringWindow::Settings.track(hwnd);
     }
 }
 
@@ -407,6 +468,7 @@ unsafe extern "system" fn foreground_changed(
     _thread: u32,
     _time: u32,
 ) {
+    sync_floating_circle_window_order();
     // SetWindowPos re-enters GPUI; defer to the foreground command task.
     if crate::popup::is_visible() {
         if crate::popup::outside_dismiss_enabled() {
@@ -439,8 +501,7 @@ pub(crate) fn point_is_taskbar(x: i32, y: i32) -> bool {
     !hwnd.is_null() && is_taskbar_window(hwnd)
 }
 
-/// Restore the visible popup to the top of the topmost band. Outside any GPUI
-/// borrow only.
+/// Restore the popup to the front of the topmost band.
 pub(crate) fn raise(hwnd: HWND) {
     unsafe {
         SetWindowPos(
@@ -601,16 +662,8 @@ pub(crate) fn place(hwnd: HWND, rect: Rect) {
 pub(crate) fn show(hwnd: HWND) {
     unsafe {
         ShowWindow(hwnd, SW_SHOWNOACTIVATE);
-        SetWindowPos(
-            hwnd,
-            HWND_TOPMOST,
-            0,
-            0,
-            0,
-            0,
-            SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE,
-        );
     }
+    raise(hwnd);
 }
 
 pub(crate) fn hide(hwnd: HWND) {
@@ -645,6 +698,7 @@ pub(crate) fn activate(hwnd: HWND) {
     unsafe {
         let _ = SetForegroundWindow(hwnd);
     }
+    raise(hwnd);
 }
 
 /// Coarse visibility/input envelope around `rect` (window-relative pixels).

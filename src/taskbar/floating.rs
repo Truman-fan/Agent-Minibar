@@ -15,7 +15,8 @@ use std::{
 };
 
 use windows_sys::Win32::{
-    Foundation::{HWND, LPARAM, LRESULT, POINT, SIZE, WPARAM},
+    Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, SIZE, WPARAM},
+    Graphics::Dwm::{DWMWA_CLOAKED, DwmGetWindowAttribute},
     Graphics::Gdi::{
         AC_SRC_ALPHA, AC_SRC_OVER, BI_RGB, BITMAPINFO, BITMAPINFOHEADER, BLENDFUNCTION, CombineRgn,
         CreateCompatibleDC, CreateDIBSection, CreateEllipticRgn, CreateRectRgn, CreateRoundRectRgn,
@@ -30,13 +31,14 @@ use windows_sys::Win32::{
             ReleaseCapture, SetCapture, TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent,
         },
         WindowsAndMessaging::{
-            CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetClassNameW,
-            GetCursorPos, GetMessageW, HWND_MESSAGE, HWND_TOPMOST, IDC_ARROW, IsWindow,
+            CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GWL_EXSTYLE,
+            GetClassNameW, GetCursorPos, GetMessageW, GetWindowLongPtrW, GetWindowRect,
+            HWND_MESSAGE, HWND_TOPMOST, IDC_ARROW, IsIconic, IsWindow, IsWindowVisible,
             LoadCursorW, MSG, PostMessageW, RegisterClassW, SW_SHOWNA, SWP_NOACTIVATE, SWP_NOMOVE,
-            SWP_NOSIZE, SetTimer, SetWindowPos, ShowWindow, TranslateMessage, ULW_ALPHA,
-            UpdateLayeredWindow, WM_APP, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE, WM_RBUTTONUP,
-            WM_TIMER, WNDCLASSW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
-            WS_POPUP, WindowFromPoint,
+            SWP_NOOWNERZORDER, SWP_NOSIZE, SetTimer, SetWindowPos, ShowWindow, TranslateMessage,
+            ULW_ALPHA, UpdateLayeredWindow, WM_APP, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE,
+            WM_RBUTTONUP, WM_TIMER, WNDCLASSW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+            WS_EX_TOPMOST, WS_POPUP, WindowFromPoint,
         },
     },
 };
@@ -45,9 +47,10 @@ use super::{
     Action, Config,
     model::{self, Appearance, WidgetView},
     render::{
-        FLOATING_CARD_HEIGHT, FLOATING_CARD_LEFT, FLOATING_CARD_RADIUS, FLOATING_CARD_TOP,
-        FLOATING_CARD_WIDTH, FLOATING_HEIGHT, FLOATING_RING_DIAMETER, FLOATING_RING_LEFT,
-        FLOATING_RING_TOP, FLOATING_WIDTH, Metrics, Renderer,
+        FLOATING_ALERT_HEIGHT, FLOATING_ALERT_TOP, FLOATING_ALERTED_HEIGHT, FLOATING_CARD_HEIGHT,
+        FLOATING_CARD_LEFT, FLOATING_CARD_RADIUS, FLOATING_CARD_TOP, FLOATING_CARD_WIDTH,
+        FLOATING_HEIGHT, FLOATING_RING_DIAMETER, FLOATING_RING_LEFT, FLOATING_RING_TOP,
+        FLOATING_WIDTH, Metrics, Renderer,
     },
 };
 use crate::{limits::ProviderLimits, settings::PopupPosition};
@@ -56,9 +59,11 @@ pub(super) enum Message {
     Config(Config),
     Limits(ProviderLimits),
     ProviderErrors(HashMap<crate::instances::ProviderId, String>),
+    Reroutes,
 }
 
 const WM_WAKE: u32 = WM_APP + 21;
+const WM_SYNC_WINDOW_ORDER: u32 = WM_APP + 22;
 const WM_MOUSELEAVE: u32 = 0x02A3;
 const TIMER_POLL: usize = 1;
 const POLL_MS: u32 = 500;
@@ -83,6 +88,7 @@ pub(super) fn publish(message: Message) {
                 (Message::Config(_), Message::Config(_))
                     | (Message::Limits(_), Message::Limits(_))
                     | (Message::ProviderErrors(_), Message::ProviderErrors(_))
+                    | (Message::Reroutes, Message::Reroutes)
             )
         });
         queue.push(message);
@@ -96,9 +102,63 @@ pub(super) fn publish(message: Message) {
             trace(format!("Could not start the floating circle: {error}"));
         }
     }
+    notify_controller(WM_WAKE);
+}
+
+#[derive(Clone, Copy)]
+pub(crate) enum CoveringWindow {
+    Settings,
+    QuotaCard,
+}
+
+impl CoveringWindow {
+    fn handle(self) -> &'static AtomicIsize {
+        static SETTINGS: AtomicIsize = AtomicIsize::new(0);
+        static QUOTA_CARD: AtomicIsize = AtomicIsize::new(0);
+        match self {
+            Self::Settings => &SETTINGS,
+            Self::QuotaCard => &QUOTA_CARD,
+        }
+    }
+
+    pub(crate) fn track(self, hwnd: HWND) {
+        self.handle().store(hwnd as isize, Ordering::Release);
+        request_window_order();
+    }
+
+    pub(crate) fn forget(self, hwnd: HWND) {
+        let _ =
+            self.handle()
+                .compare_exchange(hwnd as isize, 0, Ordering::AcqRel, Ordering::Relaxed);
+        request_window_order();
+    }
+
+    fn visible(self) -> Option<HWND> {
+        let hwnd = self.handle().load(Ordering::Acquire) as HWND;
+        if hwnd.is_null() || unsafe { IsWindowVisible(hwnd) == 0 || IsIconic(hwnd) != 0 } {
+            return None;
+        }
+        let mut cloaked = 0_u32;
+        unsafe {
+            DwmGetWindowAttribute(
+                hwnd,
+                DWMWA_CLOAKED as u32,
+                (&mut cloaked as *mut u32).cast(),
+                size_of::<u32>() as u32,
+            );
+        }
+        (cloaked == 0).then_some(hwnd)
+    }
+}
+
+pub(super) fn request_window_order() {
+    notify_controller(WM_SYNC_WINDOW_ORDER);
+}
+
+fn notify_controller(message: u32) {
     let controller = CONTROLLER.load(Ordering::SeqCst);
     if controller != 0 {
-        unsafe { PostMessageW(controller as HWND, WM_WAKE, 0, 0) };
+        unsafe { PostMessageW(controller as HWND, message, 0, 0) };
     }
 }
 
@@ -122,6 +182,10 @@ const CIRCLE_CLASS: &str = "AgentMinibarFloatingCircle";
 /// circle's mouse-up can race that animation and reopen it.
 pub(super) fn contains_screen_point(x: i32, y: i32) -> bool {
     let hwnd = unsafe { WindowFromPoint(POINT { x, y }) };
+    is_circle_window(hwnd)
+}
+
+fn is_circle_window(hwnd: HWND) -> bool {
     if hwnd.is_null() {
         return false;
     }
@@ -197,6 +261,10 @@ unsafe extern "system" fn controller_proc(
     match message {
         WM_WAKE => {
             with_host(Host::drain);
+            0
+        }
+        WM_SYNC_WINDOW_ORDER => {
+            with_host(|host| host.sync_window_order());
             0
         }
         WM_TIMER if wparam == TIMER_POLL => {
@@ -320,6 +388,46 @@ struct Circle {
     shown: bool,
 }
 
+struct CoveringWindows {
+    settings: Option<(HWND, RECT)>,
+    quota_card: Option<HWND>,
+}
+
+impl CoveringWindows {
+    fn current() -> Self {
+        let settings = CoveringWindow::Settings.visible().and_then(|hwnd| {
+            let mut bounds = RECT {
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 0,
+            };
+            (unsafe { GetWindowRect(hwnd, &mut bounds) } != 0).then_some((hwnd, bounds))
+        });
+        let quota_card = CoveringWindow::QuotaCard.visible().filter(|&hwnd| unsafe {
+            GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32 & WS_EX_TOPMOST != 0
+        });
+        Self {
+            settings,
+            quota_card,
+        }
+    }
+
+    fn predecessor(&self, circle: RECT) -> HWND {
+        // Inserting after a normal Settings window lowers only the
+        // intersecting circle, without making Settings globally topmost.
+        if let Some((settings, bounds)) = self.settings
+            && circle.left < bounds.right
+            && circle.right > bounds.left
+            && circle.top < bounds.bottom
+            && circle.bottom > bounds.top
+        {
+            return settings;
+        }
+        self.quota_card.unwrap_or(HWND_TOPMOST)
+    }
+}
+
 impl Circle {
     fn new(view: WidgetView) -> Self {
         Self {
@@ -390,6 +498,7 @@ impl Host {
                 }
                 Message::Limits(limits) => self.limits = limits,
                 Message::ProviderErrors(errors) => self.provider_errors = errors,
+                Message::Reroutes => {}
             }
         }
         self.reconcile();
@@ -434,19 +543,24 @@ impl Host {
             self.apply_regions();
             self.reconcile();
         } else {
-            for circle in &self.circles {
-                if !circle.window.is_null() {
-                    unsafe {
-                        SetWindowPos(
-                            circle.window,
-                            HWND_TOPMOST,
-                            0,
-                            0,
-                            0,
-                            0,
-                            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
-                        );
-                    }
+            self.sync_window_order();
+        }
+    }
+
+    fn sync_window_order(&self) {
+        let covering = CoveringWindows::current();
+        for (index, circle) in self.circles.iter().enumerate() {
+            if circle.shown && !circle.window.is_null() {
+                unsafe {
+                    SetWindowPos(
+                        circle.window,
+                        covering.predecessor(self.circle_bounds(index)),
+                        0,
+                        0,
+                        0,
+                        0,
+                        SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER,
+                    );
                 }
             }
         }
@@ -480,6 +594,11 @@ impl Host {
                     &self.limits,
                     self.appearance,
                     error,
+                    if config.show_reroutes {
+                        crate::codex::reroutes::pending_count(provider)
+                    } else {
+                        0
+                    },
                 )
             })
             .collect::<Vec<_>>();
@@ -507,23 +626,54 @@ impl Host {
         }
         if self.position.is_none() {
             self.position = Some(self.configured_position());
+        } else if let Some(position) = self.position {
+            // An alert card changes this circle (and possibly the two-circle
+            // group) height at runtime. Keep a group dragged near the bottom
+            // edge inside the current monitor when that card appears.
+            self.position = Some(clamp_position(position, self.group_size(), None));
         }
         if !self.ensure_windows() {
             return;
         }
+        self.apply_regions();
         self.render_all();
     }
 
     fn group_size(&self) -> (i32, i32) {
-        let count = self.circles.len().max(1) as i32;
+        if self.circles.is_empty() {
+            return (self.width, self.height);
+        }
         let gap = (CIRCLE_GAP_DIP * self.scale).round() as i32;
-        (self.width, self.height * count + gap * (count - 1))
+        let height = self
+            .circles
+            .iter()
+            .enumerate()
+            .map(|(index, _)| self.circle_height(index))
+            .sum::<i32>()
+            + gap * (self.circles.len().saturating_sub(1) as i32);
+        (self.width, height)
     }
 
     fn slot_position(&self, index: usize) -> (i32, i32) {
         let origin = self.position.unwrap_or_default();
         let gap = (CIRCLE_GAP_DIP * self.scale).round() as i32;
-        (origin.0, origin.1 + index as i32 * (self.height + gap))
+        let offset = (0..index)
+            .map(|previous| self.circle_height(previous) + gap)
+            .sum::<i32>();
+        (origin.0, origin.1 + offset)
+    }
+
+    fn circle_height(&self, index: usize) -> i32 {
+        let dip = if self
+            .circles
+            .get(index)
+            .is_some_and(|circle| circle.view.reroute_count > 0)
+        {
+            FLOATING_ALERTED_HEIGHT
+        } else {
+            FLOATING_HEIGHT
+        };
+        (dip * self.scale).round() as i32
     }
 
     fn configured_position(&self) -> (i32, i32) {
@@ -548,6 +698,7 @@ impl Host {
                 continue;
             }
             let position = self.slot_position(index);
+            let height = self.circle_height(index);
             let window = unsafe {
                 let class = wide(CIRCLE_CLASS);
                 let title = wide("Agent Minibar Floating Circle");
@@ -559,7 +710,7 @@ impl Host {
                     position.0,
                     position.1,
                     self.width,
-                    self.height,
+                    height,
                     null_mut(),
                     null_mut(),
                     GetModuleHandleW(null_mut()),
@@ -584,7 +735,7 @@ impl Host {
                 self.group_size(),
                 None,
             ));
-            self.apply_region(window);
+            self.apply_region(window, self.circles[index].view.reroute_count > 0);
         }
         self.move_windows();
         true
@@ -592,33 +743,46 @@ impl Host {
 
     fn apply_regions(&self) {
         for circle in &self.circles {
-            self.apply_region(circle.window);
+            self.apply_region(circle.window, circle.view.reroute_count > 0);
         }
     }
 
-    fn apply_region(&self, window: HWND) {
+    fn apply_region(&self, window: HWND, has_alert: bool) {
         if window.is_null() {
             return;
         }
         let px = |dip: f32| (dip * self.scale).round() as i32;
         unsafe {
+            // The GDI region has hard, integer-pixel edges. Give Direct2D
+            // room to blend the outermost pixels of the rounded cards.
+            let card_region = |top, height| {
+                let diameter = px(FLOATING_CARD_RADIUS * 2.0) + 2;
+                CreateRoundRectRgn(
+                    px(FLOATING_CARD_LEFT) - 1,
+                    px(top) - 1,
+                    px(FLOATING_CARD_LEFT + FLOATING_CARD_WIDTH) + 2,
+                    px(top + height) + 2,
+                    diameter,
+                    diameter,
+                )
+            };
             let circle = CreateEllipticRgn(
                 px(FLOATING_RING_LEFT),
                 px(FLOATING_RING_TOP),
                 px(FLOATING_RING_LEFT + FLOATING_RING_DIAMETER) + 1,
                 px(FLOATING_RING_TOP + FLOATING_RING_DIAMETER) + 1,
             );
-            let card = CreateRoundRectRgn(
-                px(FLOATING_CARD_LEFT),
-                px(FLOATING_CARD_TOP),
-                px(FLOATING_CARD_LEFT + FLOATING_CARD_WIDTH) + 1,
-                px(FLOATING_CARD_TOP + FLOATING_CARD_HEIGHT) + 1,
-                px(FLOATING_CARD_RADIUS * 2.0),
-                px(FLOATING_CARD_RADIUS * 2.0),
-            );
+            let card = card_region(FLOATING_CARD_TOP, FLOATING_CARD_HEIGHT);
             let combined = CreateRectRgn(0, 0, 0, 0);
             if !circle.is_null() && !card.is_null() && !combined.is_null() {
                 CombineRgn(combined, circle, card, RGN_OR);
+                if has_alert {
+                    let alert = card_region(FLOATING_ALERT_TOP, FLOATING_ALERT_HEIGHT);
+                    if !alert.is_null() {
+                        CombineRgn(combined, combined, alert, RGN_OR);
+                        DeleteObject(alert);
+                    }
+                }
                 // Windows owns the combined region after a successful call.
                 if SetWindowRgn(window, combined, 1) == 0 {
                     DeleteObject(combined);
@@ -643,15 +807,16 @@ impl Host {
 
     fn render(&mut self, index: usize) {
         let position = self.slot_position(index);
+        let height = self.circle_height(index);
         let Some(circle) = self.circles.get_mut(index) else {
             return;
         };
         if circle
             .surface
             .as_ref()
-            .is_none_or(|surface| surface.size != (self.width, self.height))
+            .is_none_or(|surface| surface.size != (self.width, height))
         {
-            circle.surface = Surface::new((self.width, self.height));
+            circle.surface = Surface::new((self.width, height));
         }
         let Some(surface) = circle.surface.as_ref() else {
             return;
@@ -675,14 +840,20 @@ impl Host {
             .as_ref()
             .map(|config| config.floating_circle_colors)
             .unwrap_or_default();
+        let floating_appearance = self
+            .config
+            .as_ref()
+            .map(|config| config.floating_circle_appearance)
+            .unwrap_or_default();
         if let Err(error) = renderer.paint_floating_panel(
             surface.dc,
-            (self.width, self.height),
+            (self.width, height),
             metrics,
             self.appearance,
             &circle.view,
             &progress,
             colors,
+            floating_appearance,
             circle.hover,
             circle.pressed,
         ) {
@@ -697,7 +868,7 @@ impl Host {
             };
             let size = SIZE {
                 cx: self.width,
-                cy: self.height,
+                cy: height,
             };
             let source = POINT { x: 0, y: 0 };
             let blend = BLENDFUNCTION {
@@ -721,6 +892,7 @@ impl Host {
             if !circle.shown {
                 ShowWindow(circle.window, SW_SHOWNA);
                 circle.shown = true;
+                self.sync_window_order();
             }
         }
     }
@@ -810,6 +982,14 @@ impl Host {
             .circles
             .get(drag.slot)
             .and_then(|circle| circle.view.provider);
+        let mut point = POINT { x: 0, y: 0 };
+        let reroute_alert = self
+            .circles
+            .get(drag.slot)
+            .is_some_and(|circle| circle.view.reroute_count > 0)
+            && unsafe { GetCursorPos(&mut point) } != 0
+            && point.y
+                >= self.slot_position(drag.slot).1 + (FLOATING_ALERT_TOP * self.scale) as i32;
         let page = self
             .config
             .as_ref()
@@ -828,26 +1008,38 @@ impl Host {
             page,
             dismiss_on_outside_click: true,
             floating_slot: Some(drag.slot),
+            reroute_alert,
         })
     }
 
     fn move_windows(&self) {
+        let covering = CoveringWindows::current();
         for (index, circle) in self.circles.iter().enumerate() {
             if circle.window.is_null() {
                 continue;
             }
-            let position = self.slot_position(index);
+            let bounds = self.circle_bounds(index);
             unsafe {
                 SetWindowPos(
                     circle.window,
-                    HWND_TOPMOST,
-                    position.0,
-                    position.1,
-                    self.width,
-                    self.height,
-                    SWP_NOACTIVATE,
+                    covering.predecessor(bounds),
+                    bounds.left,
+                    bounds.top,
+                    bounds.right - bounds.left,
+                    bounds.bottom - bounds.top,
+                    SWP_NOACTIVATE | SWP_NOOWNERZORDER,
                 );
             }
+        }
+    }
+
+    fn circle_bounds(&self, index: usize) -> RECT {
+        let (left, top) = self.slot_position(index);
+        RECT {
+            left,
+            top,
+            right: left + self.width,
+            bottom: top + self.circle_height(index),
         }
     }
 
@@ -905,4 +1097,45 @@ fn clamp_position(position: (i32, i32), size: (i32, i32), cursor: Option<POINT>)
             .1
             .clamp(work.top, (work.bottom - size.1).max(work.top)),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn overlapping_circle_yields_to_settings_and_restores_afterward() {
+        let first = RECT {
+            left: 100,
+            top: 100,
+            right: 195,
+            bottom: 220,
+        };
+        let second = RECT {
+            top: 230,
+            bottom: 350,
+            ..first
+        };
+        let settings = std::ptr::without_provenance_mut(20);
+        let detail = std::ptr::without_provenance_mut(30);
+        let mut windows = CoveringWindows {
+            settings: Some((
+                settings,
+                RECT {
+                    left: 150,
+                    top: 0,
+                    right: 500,
+                    bottom: second.top,
+                },
+            )),
+            quota_card: Some(detail),
+        };
+        assert_eq!(windows.predecessor(first), settings);
+        assert_eq!(windows.predecessor(second), detail);
+        windows.settings = None;
+        assert_eq!(windows.predecessor(first), detail);
+        windows.quota_card = None;
+        assert_eq!(windows.predecessor(first), HWND_TOPMOST);
+        assert_eq!(windows.predecessor(second), HWND_TOPMOST);
+    }
 }

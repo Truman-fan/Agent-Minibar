@@ -394,24 +394,30 @@ impl ProviderStore {
 
     pub fn hydrate_provider_limits(
         &self,
-        providers: &[ProviderId],
-        history_days: u16,
+        settings: &crate::settings::Settings,
     ) -> Result<ProviderLimits> {
+        let providers = settings.provider_ids();
         let mut limits = ProviderLimits::default();
         let mut legacy_accounts = Vec::new();
-        for provider in providers {
-            let mut snapshot = self.load_limits(*provider)?.unwrap_or_default();
+        for &provider in &providers {
+            let mut snapshot = self.load_limits(provider)?.unwrap_or_default();
             legacy_accounts.extend(std::mem::take(&mut snapshot.legacy_accounts));
-            snapshot.usage = self.load_usage_daily(*provider, history_days)?;
-            *limits.get_mut(*provider) = snapshot;
+            // Codex can change its login while Minibar is closed. The quota
+            // cache identifies the instance, but cannot verify the login.
+            if settings.is_discovered_codex_profile(provider) {
+                snapshot = RateLimits::default();
+            }
+            snapshot.usage = self.load_usage_daily(provider, settings.history_retention_days)?;
+            *limits.get_mut(provider) = snapshot;
         }
         // Samples cached per account before accounts became instances seed
         // each migrated instance until its own first read.
         for account in legacy_accounts {
-            let Some(provider) = providers
-                .iter()
-                .find(|provider| !provider.is_primary() && provider.id() == account.id)
-            else {
+            let Some(provider) = providers.iter().find(|provider| {
+                !provider.is_primary()
+                    && provider.id() == account.id
+                    && !settings.is_discovered_codex_profile(**provider)
+            }) else {
                 continue;
             };
             let snapshot = limits.get_mut(*provider);
@@ -2203,6 +2209,36 @@ mod tests {
         let store = ProviderStore { conn };
         store.migrate().unwrap();
         store
+    }
+
+    #[test]
+    fn detected_codex_profiles_wait_for_live_quota_on_startup() {
+        let store = test_store(Path::new(":memory:"));
+        let mut settings = crate::settings::Settings::default();
+        let cli = id(ProviderKind::Codex);
+        let desktop = settings.add_instance(crate::instances::ProviderInstance::new(
+            ProviderKind::Codex,
+            "Desktop",
+        ));
+        let claude = id(ProviderKind::Claude);
+        settings.codex_profile_pair = Some(crate::settings::CodexProfilePair {
+            desktop_id: desktop.id().into(),
+            cli_id: cli.id().into(),
+        });
+        let sample = RateLimits {
+            primary: crate::limits::LimitWindow {
+                used_percent: Some(68),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        for provider in [cli, desktop, claude] {
+            store.save_limits(provider, &sample).unwrap();
+        }
+        let limits = store.hydrate_provider_limits(&settings).unwrap();
+        assert!(limits.get(cli).primary.is_empty());
+        assert!(limits.get(desktop).primary.is_empty());
+        assert_eq!(limits.get(claude).primary.used_percent, Some(68));
     }
 
     fn hour_usage(requests: u64) -> TokenUsage {

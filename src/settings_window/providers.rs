@@ -55,7 +55,8 @@ impl ProviderInstallStatus {
             | ProviderKind::ZhipuGlm
             | ProviderKind::MiniMaxCode
             | ProviderKind::BaiduQianfan
-            | ProviderKind::TencentHunyuan => Self::checking_app(),
+            | ProviderKind::TencentHunyuan
+            | ProviderKind::WorkBuddy => Self::checking_app(),
         }
     }
 
@@ -274,6 +275,11 @@ pub(crate) fn provider_install_status(
             )
         }
         ProviderKind::OpenRouter => (None, None, None),
+        ProviderKind::WorkBuddy => {
+            let app = crate::workbuddy::installed_app(configured_folder);
+            let used = app.as_ref().map(|_| ProviderInstallSource::App);
+            (app.as_deref().map(display_fs_path), None, used)
+        }
         ProviderKind::DeepSeek => {
             let provider = ProviderId::primary(ProviderKind::DeepSeek);
             let detected = crate::deepseek::is_installed(provider);
@@ -777,6 +783,11 @@ fn folder_configs(driver: ProviderKind) -> Vec<FolderConfig> {
             "Folder with kimi.exe, kimi.cmd or kimi.ps1. Leave empty to find it automatically.",
             r"C:\Users\you\AppData\Roaming\npm",
         )],
+        ProviderKind::WorkBuddy => vec![binary(
+            "WorkBuddy",
+            crate::i18n::tr("workbuddy-app-folder"),
+            r"C:\Users\you\AppData\Local\Programs\WorkBuddy",
+        )],
         ProviderKind::Kiro => vec![
             binary(
                 crate::i18n::tr("kiro-ide-folder"),
@@ -848,6 +859,7 @@ fn provider_description(provider: ProviderKind) -> &'static str {
             crate::i18n::tr("reads-deepseek-harness-root-agent-history")
         }
         ProviderKind::KimiCode => crate::i18n::tr("reads-kimi-model-local-agent-history"),
+        ProviderKind::WorkBuddy => crate::i18n::tr("workbuddy-credits-help"),
         ProviderKind::VolcengineArk
         | ProviderKind::ZhipuGlm
         | ProviderKind::MiniMaxCode
@@ -890,6 +902,7 @@ fn source_labels(provider: ProviderKind) -> (&'static str, &'static str, &'stati
             crate::i18n::tr("qwen-code-cli"),
         ),
         ProviderKind::DeepSeekHarness => ("DeepSeek Harness sessions", "", "dsh CLI"),
+        ProviderKind::WorkBuddy => ("WorkBuddy", "", ""),
         ProviderKind::KimiCode => ("Kimi Code main-agent history", "", "Kimi Code CLI"),
         ProviderKind::VolcengineArk
         | ProviderKind::ZhipuGlm

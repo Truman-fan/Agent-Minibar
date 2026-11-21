@@ -439,6 +439,7 @@ pub(crate) struct UiState {
     pub(super) popup_position: Option<crate::settings::PopupPosition>,
     pub(super) popup_placement: crate::settings::PopupPlacement,
     pub(super) floating_circle_slots: Vec<FloatingCircleSlot>,
+    pub(super) show_reroutes: bool,
     /// Every configured instance in display order, enabled or not.
     pub(super) instances: Vec<ProviderInstance>,
     pub(super) popup_tab_mode: PopupTabMode,
@@ -497,6 +498,7 @@ impl Default for UiState {
             popup_position: None,
             popup_placement: crate::settings::PopupPlacement::default(),
             floating_circle_slots: Settings::default().floating_circle_slots,
+            show_reroutes: true,
             instances: Settings::default().instances,
             popup_tab_mode: PopupTabMode::default(),
             grouped_tab_selection: Default::default(),
@@ -528,6 +530,7 @@ impl UiState {
             show_popup_action_bar: settings.show_popup_action_bar,
             popup_floating: settings.popup_floating,
             floating_circle_slots: settings.floating_circle_slots.clone(),
+            show_reroutes: settings.floating_alerts.capability_risk_enabled,
             popup_home_order: settings.popup_home_order.clone(),
             popup_home_right_column: settings.popup_home_right_column.clone(),
             popup_home_card_layouts: settings.popup_home_card_layouts.clone(),
@@ -568,6 +571,7 @@ impl UiState {
         self.popup_position = settings.popup_position.clone();
         self.popup_placement = settings.popup_placement;
         self.floating_circle_slots = settings.floating_circle_slots.clone();
+        self.show_reroutes = settings.floating_alerts.capability_risk_enabled;
         self.instances = settings.instances.clone();
         self.popup_tab_mode = settings.popup_tab_mode;
         self.grouped_tab_selection = settings.grouped_tab_selection.clone();

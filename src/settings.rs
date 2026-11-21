@@ -9,7 +9,7 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Local, Timelike};
 use serde::{Deserialize, Serialize};
 
-pub const SETTINGS_VERSION: u32 = 47;
+pub const SETTINGS_VERSION: u32 = 49;
 /// First version where the taskbar widget is shown by default.
 const TASKBAR_DEFAULT_VERSION: u32 = 41;
 
@@ -17,6 +17,14 @@ mod migration;
 pub(crate) mod unknown;
 
 pub use crate::instances::{BadgeColor, InstanceSource, ProviderId, ProviderInstance};
+
+/// One-time registration record for two independently signed-in Codex profiles.
+/// Kept after an instance is removed so discovery respects the user's choice.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct CodexProfilePair {
+    pub(crate) desktop_id: String,
+    pub(crate) cli_id: String,
+}
 
 /// 255 until `TimeFormat::apply` runs so first paint can still follow Windows.
 static TIME_FORMAT: AtomicU8 = AtomicU8::new(u8::MAX);
@@ -561,7 +569,8 @@ impl LimitRefreshInterval {
             | ProviderKind::ZhipuGlm
             | ProviderKind::MiniMaxCode
             | ProviderKind::BaiduQianfan
-            | ProviderKind::TencentHunyuan => Self::Minutes10,
+            | ProviderKind::TencentHunyuan
+            | ProviderKind::WorkBuddy => Self::Minutes10,
             _ => Self::Minute1,
         }
     }
@@ -809,6 +818,8 @@ pub enum ProviderKind {
     MiniMaxCode,
     BaiduQianfan,
     TencentHunyuan,
+    #[serde(rename = "workbuddy", alias = "work_buddy")]
+    WorkBuddy,
 }
 
 /// When the app backs off to leave CPU, GPU and network to a game.
@@ -984,7 +995,7 @@ fn new_id(prefix: &str) -> String {
 }
 
 impl ProviderKind {
-    pub const ALL: [Self; 19] = [
+    pub const ALL: [Self; 20] = [
         Self::Codex,
         Self::Claude,
         Self::Cursor,
@@ -1004,6 +1015,7 @@ impl ProviderKind {
         Self::MiniMaxCode,
         Self::BaiduQianfan,
         Self::TencentHunyuan,
+        Self::WorkBuddy,
     ];
 
     pub const fn id(self) -> &'static str {
@@ -1027,6 +1039,7 @@ impl ProviderKind {
             Self::MiniMaxCode => "minimax-code",
             Self::BaiduQianfan => "baidu-qianfan",
             Self::TencentHunyuan => "tencent-hunyuan",
+            Self::WorkBuddy => "workbuddy",
         }
     }
 
@@ -1051,6 +1064,7 @@ impl ProviderKind {
             "minimax-code" => Some(Self::MiniMaxCode),
             "baidu-qianfan" => Some(Self::BaiduQianfan),
             "tencent-hunyuan" => Some(Self::TencentHunyuan),
+            "workbuddy" => Some(Self::WorkBuddy),
             _ => None,
         }
     }
@@ -1076,6 +1090,7 @@ impl ProviderKind {
             Self::MiniMaxCode => "MiniMax",
             Self::BaiduQianfan => "Qianfan / ERNIE",
             Self::TencentHunyuan => "Hunyuan / CodeBuddy",
+            Self::WorkBuddy => "WorkBuddy",
         }
     }
 
@@ -1722,6 +1737,73 @@ pub struct FloatingCircleColors {
     pub safe: TrayFixedColor,
     pub high: TrayFixedColor,
     pub solid: TrayFixedColor,
+}
+
+pub const FLOATING_OPACITY_MIN: u8 = 40;
+pub const FLOATING_OPACITY_MAX: u8 = 100;
+pub const FLOATING_OPACITY_DEFAULT: u8 = 85;
+
+/// Transparency and contrast controls for the native floating quota surface.
+///
+/// Quota progress, provider marks, and text intentionally remain readable;
+/// these values affect the neutral ring surface and information-card surface.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct FloatingCircleAppearance {
+    pub circle_opacity_percent: u8,
+    pub card_opacity_percent: u8,
+    pub card_follows_circle: bool,
+    pub light_background_enhancement: bool,
+}
+
+/// Actionable cards shown below a floating quota card. Normal/unknown states
+/// remain hidden so the desktop only grows when the user can act.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct FloatingAlertSettings {
+    pub capability_risk_enabled: bool,
+}
+
+impl Default for FloatingAlertSettings {
+    fn default() -> Self {
+        Self {
+            capability_risk_enabled: true,
+        }
+    }
+}
+
+impl FloatingCircleAppearance {
+    pub const fn resolved_card_opacity_percent(self) -> u8 {
+        if self.card_follows_circle {
+            self.circle_opacity_percent
+        } else {
+            self.card_opacity_percent
+        }
+    }
+
+    fn normalize(&mut self) -> bool {
+        let circle = self
+            .circle_opacity_percent
+            .clamp(FLOATING_OPACITY_MIN, FLOATING_OPACITY_MAX);
+        let card = self
+            .card_opacity_percent
+            .clamp(FLOATING_OPACITY_MIN, FLOATING_OPACITY_MAX);
+        let changed = circle != self.circle_opacity_percent || card != self.card_opacity_percent;
+        self.circle_opacity_percent = circle;
+        self.card_opacity_percent = card;
+        changed
+    }
+}
+
+impl Default for FloatingCircleAppearance {
+    fn default() -> Self {
+        Self {
+            circle_opacity_percent: FLOATING_OPACITY_DEFAULT,
+            card_opacity_percent: FLOATING_OPACITY_DEFAULT,
+            card_follows_circle: true,
+            light_background_enhancement: true,
+        }
+    }
 }
 
 /// One of the at most two compact floating-circle display slots.
@@ -2458,6 +2540,8 @@ pub struct Settings {
     /// Provider instances in the user's order for the Settings sidebar and
     /// popup tabs. Each one is an independent provider.
     pub instances: Vec<ProviderInstance>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) codex_profile_pair: Option<CodexProfilePair>,
     /// Separate tabs per instance, or one tab per driver.
     pub popup_tab_mode: PopupTabMode,
     /// Driver id -> instance id selected in a grouped tab's switcher.
@@ -2475,6 +2559,7 @@ pub struct Settings {
     /// as "Use monochrome icons".
     pub use_colored_provider_icons: bool,
     pub replace_chatgpt_logo_with_codex: bool,
+    pub use_doubao_logo: bool,
     /// Weekly activations, each bound to exactly one provider instance.
     pub scheduled_activations: Vec<ScheduledActivation>,
     /// Weekly local-time periods that suppress automatic activation per provider.
@@ -2511,6 +2596,10 @@ pub struct Settings {
     pub floating_circle_enabled: bool,
     /// User-selected color behavior for floating quota rings and values.
     pub floating_circle_colors: FloatingCircleColors,
+    /// Transparency and cross-background contrast of the native floating surface.
+    pub floating_circle_appearance: FloatingCircleAppearance,
+    /// Evidence-backed warning cards shown only for actionable states.
+    pub floating_alerts: FloatingAlertSettings,
     /// Last dragged origin of the floating circle in physical screen pixels.
     pub floating_circle_position: Option<PopupPosition>,
     /// User-selected floating targets. One slot is always present and the
@@ -2578,6 +2667,7 @@ impl Default for Settings {
                 .into_iter()
                 .map(ProviderInstance::primary)
                 .collect(),
+            codex_profile_pair: None,
             popup_tab_mode: PopupTabMode::default(),
             grouped_tab_selection: BTreeMap::new(),
             popup_two_columns: false,
@@ -2586,6 +2676,7 @@ impl Default for Settings {
             popup_home_card_layouts: BTreeMap::new(),
             use_colored_provider_icons: true,
             replace_chatgpt_logo_with_codex: false,
+            use_doubao_logo: true,
             scheduled_activations: Vec::new(),
             auto_activation_pauses: Vec::new(),
             auto_reset_lead: AutoResetLead::default(),
@@ -2606,8 +2697,12 @@ impl Default for Settings {
             popup_pinned: !cfg!(windows),
             // Linux has no tray position to open beside.
             popup_floating: !cfg!(windows),
-            floating_circle_enabled: false,
+            // The floating quota surface is the primary Windows experience.
+            // Migration keeps an existing installation's previous choice.
+            floating_circle_enabled: cfg!(windows),
             floating_circle_colors: FloatingCircleColors::default(),
+            floating_circle_appearance: FloatingCircleAppearance::default(),
+            floating_alerts: FloatingAlertSettings::default(),
             floating_circle_position: None,
             floating_circle_slots: default_floating_circle_slots(),
             popup_height_dip: None,
@@ -2641,6 +2736,18 @@ impl Default for Settings {
 }
 
 impl Settings {
+    #[cfg(windows)]
+    pub fn discover_codex_accounts(&mut self, path: &Path) -> Result<()> {
+        if self.codex_profile_pair.is_none() && !crate::fake::enabled() {
+            let mut next = self.clone();
+            if crate::codex::profile_discovery::discover(&mut next) {
+                next.save(path)?;
+                *self = next;
+            }
+        }
+        Ok(())
+    }
+
     /// Shows the taskbar widgets, seeding one for the first enabled provider
     /// when there is none, so the feature is discoverable out of the box.
     fn enable_taskbar_by_default(&mut self) -> bool {
@@ -2909,6 +3016,7 @@ impl Settings {
         for slot in &mut self.floating_circle_slots {
             changed |= slot.normalize();
         }
+        changed |= self.floating_circle_appearance.normalize();
         if self.version < SETTINGS_VERSION {
             self.version = SETTINGS_VERSION;
             changed = true;
@@ -3034,6 +3142,53 @@ impl Settings {
             .collect()
     }
 
+    fn enabled_codex_profile(&self, id: &str) -> Option<ProviderId> {
+        self.instance_by_id(id)
+            .filter(|instance| instance.enabled && instance.driver == ProviderKind::Codex)
+            .map(ProviderInstance::provider_id)
+    }
+
+    pub(crate) fn is_discovered_codex_profile(&self, provider: ProviderId) -> bool {
+        provider.kind() == ProviderKind::Codex
+            && self.codex_profile_pair.as_ref().is_some_and(|pair| {
+                provider.id() == pair.desktop_id || provider.id() == pair.cli_id
+            })
+    }
+
+    /// Shared by the native host and the target selectors so they agree on
+    /// the effective account, including a slot still following its default.
+    pub(crate) fn floating_circle_target(&self, index: usize) -> Option<ProviderId> {
+        let slot = self.floating_circle_slots.get(index)?;
+        if let Some(provider) = slot.provider()
+            && self
+                .instance(provider)
+                .is_some_and(|instance| instance.enabled)
+        {
+            return Some(provider);
+        }
+        if index != 0 {
+            return None;
+        }
+        let preferred = self
+            .taskbar
+            .widgets
+            .iter()
+            .filter_map(TaskbarWidget::provider)
+            .find(|provider| {
+                self.instance(*provider)
+                    .is_some_and(|instance| instance.enabled)
+            })
+            .or_else(|| self.enabled_providers().first().copied())?;
+        if let Some(pair) = &self.codex_profile_pair
+            && preferred.id() == pair.cli_id
+        {
+            return self
+                .enabled_codex_profile(&pair.desktop_id)
+                .or(Some(preferred));
+        }
+        Some(preferred)
+    }
+
     /// Binds one of the two supported floating-circle slots to an account.
     pub fn set_floating_circle_provider(&mut self, index: usize, provider: ProviderId) {
         if index >= 2 {
@@ -3057,14 +3212,24 @@ impl Settings {
             return;
         }
         let enabled = self.enabled_providers();
-        let primary = self
-            .floating_circle_slots
-            .first()
-            .and_then(FloatingCircleSlot::provider)
-            .or_else(|| enabled.first().copied());
-        let provider = enabled
-            .into_iter()
-            .find(|provider| Some(*provider) != primary)
+        let primary = self.floating_circle_target(0);
+        let counterpart = self.codex_profile_pair.as_ref().and_then(|pair| {
+            let primary = primary?;
+            let other = if primary.id() == pair.desktop_id {
+                &pair.cli_id
+            } else if primary.id() == pair.cli_id {
+                &pair.desktop_id
+            } else {
+                return None;
+            };
+            self.enabled_codex_profile(other)
+        });
+        let provider = counterpart
+            .or_else(|| {
+                enabled
+                    .into_iter()
+                    .find(|provider| Some(*provider) != primary)
+            })
             .or(primary);
         if let Some(provider) = provider {
             self.floating_circle_slots
@@ -3376,6 +3541,7 @@ impl Settings {
             self.popup_background_material,
         );
         crate::provider_registry::apply_logo_settings(self.replace_chatgpt_logo_with_codex);
+        crate::provider_registry::apply_doubao_logo(self.use_doubao_logo);
         crate::instances::publish(&self.instances);
         crate::discovery::protect_configured_paths(
             self.instances
@@ -4426,6 +4592,47 @@ fn migrate(document: &mut toml::Value, mut version: u32) -> Result<()> {
                 root.insert("version".into(), toml::Value::Integer(47));
                 version = 47;
             }
+            47 => {
+                // A new Windows installation starts with the floating surface
+                // visible. Existing files retain their historical choice;
+                // even a hand-written v47 file without the key stays off.
+                let root = document
+                    .as_table_mut()
+                    .context("settings root must be a TOML table")?;
+                root.entry("floating_circle_enabled")
+                    .or_insert(toml::Value::Boolean(false));
+                root.entry("floating_circle_appearance").or_insert_with(|| {
+                    toml::Value::try_from(FloatingCircleAppearance::default())
+                        .expect("default floating-circle appearance encodes")
+                });
+                root.insert("version".into(), toml::Value::Integer(48));
+                version = 48;
+            }
+            48 => {
+                let root = document
+                    .as_table_mut()
+                    .context("settings root must be a TOML table")?;
+                let instances = root
+                    .entry("instances")
+                    .or_insert_with(|| {
+                        toml::Value::try_from(Settings::default().instances)
+                            .expect("default provider instances encode")
+                    })
+                    .as_array_mut()
+                    .context("settings instances must be a TOML array")?;
+                if !instances.iter().any(|instance| {
+                    matches!(
+                        instance.get("driver").and_then(toml::Value::as_str),
+                        Some("workbuddy" | "work_buddy")
+                    ) || instance.get("id").and_then(toml::Value::as_str) == Some("workbuddy")
+                }) {
+                    instances.push(toml::Value::try_from(ProviderInstance::primary(
+                        ProviderKind::WorkBuddy,
+                    ))?);
+                }
+                root.insert("version".into(), toml::Value::Integer(49));
+                version = 49;
+            }
             // Unknown future/gap versions: stamp current and keep decoding with
             // serde defaults rather than refusing to start.
             _ => {
@@ -4732,6 +4939,76 @@ instances = []
             fs::read_to_string(path)
                 .unwrap()
                 .contains("floating_circle_slots")
+        );
+    }
+
+    #[test]
+    fn migrating_v48_adds_workbuddy_without_enabling_it_or_replacing_codex() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.toml");
+        std::fs::write(&path, "version = 48\n").unwrap();
+        let settings = Settings::load_or_create(&path).unwrap();
+        assert!(
+            settings
+                .instances
+                .iter()
+                .any(|instance| instance.driver == ProviderKind::Codex)
+        );
+        let workbuddy = settings
+            .instances
+            .iter()
+            .filter(|instance| instance.driver == ProviderKind::WorkBuddy)
+            .collect::<Vec<_>>();
+        assert_eq!(workbuddy.len(), 1);
+        assert!(!workbuddy[0].enabled);
+        assert!(!crate::provider_registry::supports_usage_stats(
+            ProviderKind::WorkBuddy
+        ));
+        assert!(settings.use_doubao_logo);
+    }
+
+    #[test]
+    fn new_install_enables_the_windows_floating_circle() {
+        assert_eq!(Settings::default().floating_circle_enabled, cfg!(windows));
+    }
+
+    #[test]
+    fn v47_migration_preserves_the_existing_floating_circle_choice() {
+        for (raw, expected) in [
+            ("version = 47\nfloating_circle_enabled = true\n", true),
+            ("version = 47\nfloating_circle_enabled = false\n", false),
+            ("version = 47\n", false),
+        ] {
+            let mut document: toml::Value = toml::from_str(raw).unwrap();
+            migrate(&mut document, 47).unwrap();
+            assert_eq!(
+                document
+                    .get("floating_circle_enabled")
+                    .and_then(toml::Value::as_bool),
+                Some(expected)
+            );
+            assert!(document.get("floating_circle_appearance").is_some());
+            assert_eq!(
+                document.get("version").and_then(toml::Value::as_integer),
+                Some(i64::from(SETTINGS_VERSION))
+            );
+        }
+    }
+
+    #[test]
+    fn floating_circle_opacity_is_repaired_to_the_supported_range() {
+        let mut settings = Settings::default();
+        settings.floating_circle_appearance.circle_opacity_percent = 1;
+        settings.floating_circle_appearance.card_opacity_percent = 255;
+
+        assert!(settings.repair_inplace());
+        assert_eq!(
+            settings.floating_circle_appearance.circle_opacity_percent,
+            FLOATING_OPACITY_MIN
+        );
+        assert_eq!(
+            settings.floating_circle_appearance.card_opacity_percent,
+            FLOATING_OPACITY_MAX
         );
     }
 

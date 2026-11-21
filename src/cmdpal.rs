@@ -658,6 +658,7 @@ mod tests {
             show_pace: false,
             card: Vec::new(),
             floating_card: None,
+            reroute_count: 0,
             floating_warning: None,
         }
     }

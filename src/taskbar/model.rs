@@ -133,6 +133,9 @@ pub(crate) struct WidgetView {
     /// Balance or availability state used only when no percentage quota is
     /// available for the floating-circle card.
     pub(crate) floating_card: Option<FloatingCardState>,
+    /// Hidden for normal and unknown states; present only with confirmed,
+    /// actionable evidence.
+    pub(crate) reroute_count: usize,
     /// A live read failed. Cached values remain visible but get a compact
     /// warning marker instead of silently appearing current.
     pub(crate) floating_warning: Option<Rgb>,
@@ -365,6 +368,7 @@ pub(crate) fn resolve(
         show_pace: widget.show_pace,
         card: card_sections(widget, limits, appearance, now),
         floating_card: None,
+        reroute_count: 0,
         floating_warning: None,
     }
 }
@@ -378,6 +382,7 @@ pub(crate) fn resolve_floating(
     limits: &ProviderLimits,
     appearance: Appearance,
     error: Option<&str>,
+    reroute_count: usize,
 ) -> WidgetView {
     let mut view = resolve(widget, limits, appearance);
     // Providers without percentage metrics have no indicator from which the
@@ -404,6 +409,7 @@ pub(crate) fn resolve_floating(
             error,
         ));
     }
+    view.reroute_count = reroute_count;
     view
 }
 
@@ -718,7 +724,7 @@ mod tests {
             },
         )]);
 
-        let view = resolve_floating(&widget, provider, &limits, appearance(false), None);
+        let view = resolve_floating(&widget, provider, &limits, appearance(false), None, 0);
 
         assert!(view.rows.is_empty());
         let card = view.floating_card.expect("balance card");
@@ -740,7 +746,7 @@ mod tests {
             },
         )]);
 
-        let view = resolve_floating(&widget, provider, &limits, appearance(false), None);
+        let view = resolve_floating(&widget, provider, &limits, appearance(false), None, 0);
 
         let card = view.floating_card.expect("availability card");
         assert_eq!(card.value, crate::i18n::tr("floating-circle-no-quota-api"));
@@ -758,6 +764,7 @@ mod tests {
             &ProviderLimits::default(),
             appearance(false),
             Some("Please sign in again"),
+            0,
         );
 
         assert!(view.rows.iter().all(|row| row.progress.is_none()));
@@ -766,6 +773,55 @@ mod tests {
             view.floating_card.expect("authorization card").value,
             crate::i18n::tr("floating-circle-not-authorized")
         );
+        assert_eq!(view.reroute_count, 0);
+    }
+
+    #[test]
+    fn floating_refresh_error_does_not_raise_an_alert_from_cached_quota() {
+        let provider = ProviderId::primary(ProviderKind::Codex);
+        let widget = TaskbarWidget::for_provider(provider);
+        let view = resolve_floating(
+            &widget,
+            provider,
+            &limits(82, 10),
+            appearance(false),
+            Some("refresh failed"),
+            0,
+        );
+
+        assert_eq!(view.reroute_count, 0);
+    }
+
+    #[test]
+    fn floating_normal_and_unknown_states_do_not_add_an_alert_card() {
+        let provider = ProviderId::primary(ProviderKind::Codex);
+        let widget = TaskbarWidget::for_provider(provider);
+        let view = resolve_floating(
+            &widget,
+            provider,
+            &limits(10, 10),
+            appearance(false),
+            None,
+            0,
+        );
+        assert_eq!(view.reroute_count, 0);
+    }
+
+    #[test]
+    fn floating_reroute_count_is_independent_of_quota_availability() {
+        let provider = ProviderId::primary(ProviderKind::Codex);
+        let widget = TaskbarWidget::for_provider(provider);
+        for count in [0, 2] {
+            let view = resolve_floating(
+                &widget,
+                provider,
+                &limits(100, 100),
+                appearance(false),
+                Some("quota temporarily unavailable"),
+                count,
+            );
+            assert_eq!(view.reroute_count, count);
+        }
     }
 
     #[test]

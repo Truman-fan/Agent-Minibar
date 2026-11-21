@@ -587,7 +587,11 @@ pub(crate) fn provider_mark(
         .relative()
         .flex_none()
         .size(px(size))
-        .child(icon(glyph, size, color));
+        .child(if glyph == "doubao" {
+            image("color/doubao.svg", size).into_any_element()
+        } else {
+            icon(glyph, size, color).into_any_element()
+        });
     let Some(badge) = badge else {
         return mark.into_any_element();
     };

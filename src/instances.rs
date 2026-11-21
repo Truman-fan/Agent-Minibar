@@ -115,8 +115,14 @@ impl ProviderId {
     /// otherwise just the instance name.
     pub fn qualified_name(self) -> String {
         let name = self.display_name();
-        if self.badge().is_some() && name != self.kind.display_name() {
-            format!("{} \u{00b7} {name}", self.kind.display_name())
+        let driver = self.kind.display_name();
+        if self.badge().is_some()
+            && name != driver
+            && !name
+                .strip_prefix(driver)
+                .is_some_and(|suffix| suffix.starts_with(' '))
+        {
+            format!("{driver} \u{00b7} {name}")
         } else {
             name
         }
@@ -191,6 +197,13 @@ fn labels() -> std::sync::RwLockReadGuard<'static, HashMap<&'static str, Instanc
 /// Publishes names and badges for every configured instance. Called whenever
 /// settings are loaded or changed so all surfaces label instances alike.
 pub fn publish(instances: &[ProviderInstance]) {
+    let codex_home = instances
+        .iter()
+        .find(|instance| instance.driver == ProviderKind::Codex && instance.is_primary())
+        .and_then(ProviderInstance::config_folder);
+    *PRIMARY_CODEX_HOME
+        .write()
+        .unwrap_or_else(|error| error.into_inner()) = codex_home;
     let mut enabled_per_driver = HashMap::<ProviderKind, usize>::new();
     for instance in instances.iter().filter(|instance| instance.enabled) {
         *enabled_per_driver.entry(instance.driver).or_default() += 1;
@@ -216,6 +229,16 @@ pub fn publish(instances: &[ProviderInstance]) {
         .iter()
         .map(|instance| (instance.provider_id(), instance.enabled))
         .collect();
+}
+
+static PRIMARY_CODEX_HOME: RwLock<Option<PathBuf>> = RwLock::new(None);
+
+pub(crate) fn primary_codex_home() -> PathBuf {
+    PRIMARY_CODEX_HOME
+        .read()
+        .unwrap_or_else(|error| error.into_inner())
+        .clone()
+        .unwrap_or_else(crate::usage::codex_home)
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -604,10 +627,9 @@ pub fn folder_identity(path: Option<&Path>, driver: ProviderKind) -> Option<Stri
 
 /// The CLI's own default config folder.
 pub fn default_folder(driver: ProviderKind) -> Option<PathBuf> {
-    let home = directories::BaseDirs::new()?.home_dir().to_path_buf();
     match driver {
-        ProviderKind::Claude => Some(home.join(".claude")),
-        ProviderKind::Codex => Some(home.join(".codex")),
+        ProviderKind::Claude => Some(directories::BaseDirs::new()?.home_dir().join(".claude")),
+        ProviderKind::Codex => Some(crate::usage::codex_home()),
         _ => None,
     }
 }

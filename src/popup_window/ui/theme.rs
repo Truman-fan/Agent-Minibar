@@ -879,6 +879,7 @@ impl Palette {
             ProviderKind::MiniMaxCode => (248, 87, 73),
             ProviderKind::BaiduQianfan => (41, 93, 255),
             ProviderKind::TencentHunyuan => (27, 113, 255),
+            ProviderKind::WorkBuddy => (47, 120, 247),
         })
     }
 

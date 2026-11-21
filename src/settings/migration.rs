@@ -314,7 +314,8 @@ fn instances_from_legacy(legacy: &LegacyV38) -> Migrated {
             | ProviderKind::ZhipuGlm
             | ProviderKind::MiniMaxCode
             | ProviderKind::BaiduQianfan
-            | ProviderKind::TencentHunyuan => instances.push(base),
+            | ProviderKind::TencentHunyuan
+            | ProviderKind::WorkBuddy => instances.push(base),
         }
     }
 

@@ -2906,6 +2906,35 @@ impl PopupRoot {
                 &options,
             );
             let mut children = self.render_cards(&cards, PopupSurface::ProviderTab, window, cx);
+            if self.ui.show_reroutes && provider.kind() == ProviderKind::Codex {
+                if let Some(reroutes) = self.render_model_reroutes(provider) {
+                    children.insert(0, reroutes);
+                }
+            }
+            if provider.kind() == ProviderKind::WorkBuddy {
+                let action = div()
+                    .id("workbuddy-usage-guide")
+                    .text_color(self.palette.accent)
+                    .cursor_pointer()
+                    .on_click(|_, _, _| {
+                        if let Err(error) = crate::updater::open_url(crate::workbuddy::USAGE_GUIDE)
+                        {
+                            crate::logger::info(format!("open WorkBuddy usage guide: {error:#}"));
+                        }
+                    })
+                    .child(crate::i18n::tr("workbuddy-open-credits"))
+                    .into_any_element();
+                children.push(
+                    components::info_bar_with_action(
+                        "WorkBuddy",
+                        crate::i18n::tr("workbuddy-credits-help"),
+                        Severity::Informational,
+                        &self.palette,
+                        Some(action),
+                    )
+                    .into_any_element(),
+                );
+            }
             // Before the first quota sample there is no account strip to
             // carry the key list, so it follows the heading on its own.
             if openrouter
@@ -2926,6 +2955,98 @@ impl PopupRoot {
             );
         }
         sections
+    }
+
+    fn render_model_reroutes(&self, provider: ProviderId) -> Option<AnyElement> {
+        use crate::codex::reroutes::{self, Phase};
+        let notices = reroutes::pending(provider);
+        if notices.is_empty() {
+            return (!reroutes::connected(provider)).then(|| {
+                div()
+                    .text_color(self.palette.text_tertiary)
+                    .text_size(px(12.0))
+                    .child(crate::i18n::tr("floating-reroute-not-connected"))
+                    .into_any_element()
+            });
+        }
+        let palette = &self.palette;
+        let mut card =
+            components::card(palette)
+                .p(px(10.0))
+                .flex()
+                .flex_col()
+                .gap(px(8.0))
+                .child(
+                    div()
+                        .flex()
+                        .gap(px(6.0))
+                        .items_center()
+                        .child(div().size(px(7.0)).rounded(px(4.0)).bg(palette.critical))
+                        .child(
+                            div()
+                                .font_weight(FontWeight::SEMIBOLD)
+                                .child(crate::i18n::tr("floating-model-reroute")),
+                        )
+                        .child(div().text_color(palette.text_secondary).child(
+                            crate::i18n::format(
+                                "floating-reroute-count",
+                                &[("count", notices.len().to_string())],
+                            ),
+                        )),
+                );
+        for notice in notices {
+            let thread_id = notice.thread_id().to_owned();
+            let (from, to) = notice.models();
+            let status = crate::i18n::tr(match notice.phase {
+                Phase::Running => "floating-reroute-running",
+                Phase::Ended => "floating-reroute-ended",
+                Phase::Unknown => "floating-reroute-not-connected",
+            });
+            let link = format!("codex://threads/{thread_id}");
+            let viewed_notice = notice.clone();
+            let actions = div()
+                .flex()
+                .gap(px(12.0))
+                .child(
+                    div()
+                        .id(eid(format!("reroute-open-{thread_id}")))
+                        .cursor_pointer()
+                        .text_color(palette.accent)
+                        .on_click(move |_, _, _| {
+                            if let Err(error) = crate::updater::open_url(&link) {
+                                crate::logger::info(format!("open Codex conversation: {error:#}"));
+                            }
+                        })
+                        .child(crate::i18n::tr("floating-reroute-open-chat")),
+                )
+                .child(
+                    div()
+                        .id(eid(format!("reroute-seen-{thread_id}")))
+                        .cursor_pointer()
+                        .text_color(palette.text_secondary)
+                        .on_click(move |_, _, _| reroutes::acknowledge(provider, &viewed_notice))
+                        .child(crate::i18n::tr("floating-reroute-mark-viewed")),
+                );
+            let row = div()
+                .flex()
+                .flex_col()
+                .gap(px(3.0))
+                .child(
+                    div()
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .child(notice.title.clone()),
+                )
+                .child(div().text_color(palette.text_secondary).child(status))
+                .child(div().child(format!("{from} → {to}")))
+                .child(
+                    div()
+                        .text_color(palette.text_secondary)
+                        .child(notice.reason().to_owned()),
+                )
+                .child(actions);
+            card = card.child(row);
+        }
+        Some(card.into_any_element())
     }
 
     pub(super) fn card_style(&self) -> CardStyle {

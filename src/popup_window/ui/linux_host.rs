@@ -91,6 +91,9 @@ impl Host {
             PopupCommand::SelectView(view) => {
                 let _ = self.root.update(cx, |root, cx| root.select_view(view, cx));
             }
+            PopupCommand::ReroutesChanged => {
+                let _ = self.root.update(cx, |_, cx| cx.notify());
+            }
             PopupCommand::SelectNearest(provider) => {
                 let _ = self.root.update(cx, |root, cx| {
                     if let Some(view) = root.nearest_view(provider, cx) {

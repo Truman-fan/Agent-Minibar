@@ -6,7 +6,7 @@ use gpui::{
     SharedString, StatefulInteractiveElement, Styled, Window, div, px,
 };
 
-use super::kit::{self, Button, Kit, Row};
+use super::kit::{self, Button, Kit, Row, SliderRange};
 use super::window::{DraggedProvider, SettingsWindow};
 use crate::popup_window::ui::theme::rgb8;
 use crate::settings::{
@@ -183,6 +183,53 @@ impl SettingsWindow {
         kit::field(k, label, control.into_any_element())
     }
 
+    fn floating_opacity_row(
+        &mut self,
+        k: &mut Kit,
+        cx: &mut Context<Self>,
+        id: &'static str,
+        copy: (&'static str, &'static str),
+        value: u8,
+        set: fn(&mut Settings, u8),
+    ) -> AnyElement {
+        let slider = kit::slider(
+            k,
+            id,
+            f32::from(value),
+            SliderRange {
+                min: f32::from(crate::settings::FLOATING_OPACITY_MIN),
+                max: f32::from(crate::settings::FLOATING_OPACITY_MAX),
+                step: 5.0,
+            },
+            160.0,
+            Self::h(cx, move |this, next: f32, _, cx| {
+                let next = next.round().clamp(
+                    f32::from(crate::settings::FLOATING_OPACITY_MIN),
+                    f32::from(crate::settings::FLOATING_OPACITY_MAX),
+                ) as u8;
+                if next != value {
+                    this.edit(cx, move |settings| set(settings, next))
+                }
+            }),
+        );
+        Row::new(format!("{id}-row"), copy.0)
+            .description(k, copy.1)
+            .trailing(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(10.0))
+                    .child(slider)
+                    .child(
+                        kit::text(format!("{value}%"), 13.0, k.theme.text_secondary)
+                            .w(px(40.0))
+                            .text_right(),
+                    )
+                    .into_any_element(),
+            )
+            .render(k)
+    }
+
     pub(super) fn customize_page(
         &mut self,
         k: &mut Kit,
@@ -289,17 +336,83 @@ impl SettingsWindow {
                     |s| s.floating_circle_enabled,
                     |s, v| s.floating_circle_enabled = v,
                 ));
+                let circle_opacity = self
+                    .settings
+                    .floating_circle_appearance
+                    .circle_opacity_percent;
+                rows.push(self.floating_opacity_row(
+                    k,
+                    cx,
+                    "floating-circle-opacity",
+                    (
+                        crate::i18n::tr("floating-circle-opacity"),
+                        crate::i18n::tr("floating-circle-opacity-description"),
+                    ),
+                    circle_opacity,
+                    |settings, value| {
+                        settings.floating_circle_appearance.circle_opacity_percent = value
+                    },
+                ));
+                let card_follows = self.settings.floating_circle_appearance.card_follows_circle;
+                rows.push(bool_row(
+                    self,
+                    k,
+                    cx,
+                    "floating-card-opacity-follows-circle",
+                    crate::i18n::tr("floating-card-opacity-follows-circle"),
+                    Some(crate::i18n::tr(
+                        "floating-card-opacity-follows-circle-description",
+                    )),
+                    |s| s.floating_circle_appearance.card_follows_circle,
+                    |s, v| s.floating_circle_appearance.card_follows_circle = v,
+                ));
+                if !card_follows {
+                    let card_opacity = self
+                        .settings
+                        .floating_circle_appearance
+                        .card_opacity_percent;
+                    rows.push(self.floating_opacity_row(
+                        k,
+                        cx,
+                        "floating-card-opacity",
+                        (
+                            crate::i18n::tr("floating-card-opacity"),
+                            crate::i18n::tr("floating-card-opacity-description"),
+                        ),
+                        card_opacity,
+                        |settings, value| {
+                            settings.floating_circle_appearance.card_opacity_percent = value
+                        },
+                    ));
+                }
+                rows.push(bool_row(
+                    self,
+                    k,
+                    cx,
+                    "floating-light-background-enhancement",
+                    crate::i18n::tr("floating-light-background-enhancement"),
+                    Some(crate::i18n::tr(
+                        "floating-light-background-enhancement-description",
+                    )),
+                    |s| s.floating_circle_appearance.light_background_enhancement,
+                    |s, v| s.floating_circle_appearance.light_background_enhancement = v,
+                ));
+                rows.push(bool_row(
+                    self,
+                    k,
+                    cx,
+                    "floating-capability-risk-alerts",
+                    crate::i18n::tr("floating-model-reroute"),
+                    None,
+                    |s| s.floating_alerts.capability_risk_enabled,
+                    |s, v| s.floating_alerts.capability_risk_enabled = v,
+                ));
                 let providers = self.settings.enabled_providers();
                 let provider_labels = providers
                     .iter()
                     .map(|provider| SharedString::from(provider.qualified_name()))
                     .collect::<Vec<_>>();
-                let primary_provider = self
-                    .settings
-                    .floating_circle_slots
-                    .first()
-                    .and_then(|slot| slot.provider())
-                    .or_else(|| providers.first().copied());
+                let primary_provider = self.settings.floating_circle_target(0);
                 let primary_index = primary_provider
                     .and_then(|provider| providers.iter().position(|item| *item == provider))
                     .map_or(-1, |index| index as i32);
@@ -335,7 +448,7 @@ impl SettingsWindow {
                     }),
                 ));
                 if second_enabled {
-                    let second_provider = self.settings.floating_circle_slots[1].provider();
+                    let second_provider = self.settings.floating_circle_target(1);
                     let second_index = second_provider
                         .and_then(|provider| providers.iter().position(|item| *item == provider))
                         .map_or(-1, |index| index as i32);

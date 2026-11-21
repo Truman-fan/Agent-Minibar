@@ -323,6 +323,7 @@ fn common_locations() -> Vec<PathBuf> {
         if let Some(local) = env::var_os("LOCALAPPDATA") {
             let local = PathBuf::from(local);
             paths.extend([
+                local.join("Programs/OpenAI/Codex/bin/codex.exe"),
                 local.join("pnpm/codex.cmd"),
                 local.join("pnpm/codex.ps1"),
                 local.join("npm/codex.cmd"),

@@ -42,6 +42,12 @@ fn run() -> Result<()> {
     }
     let mut settings = Settings::load_or_create(&path)?;
     settings.language.apply();
+    #[cfg(windows)]
+    if let Err(error) = settings.discover_codex_accounts(&path) {
+        agent_minibar::logger::info(format!(
+            "Could not register detected Codex profiles: {error:#}"
+        ));
+    }
     let just_updated = show_post_update_success_if_needed();
     if let Err(error) = settings.reconcile_startup_from_registry(&path) {
         eprintln!("failed to reconcile startup setting: {error:#}");
@@ -88,7 +94,7 @@ fn run() -> Result<()> {
             if let Err(error) = store.prune_unknown_providers(&settings.provider_ids()) {
                 eprintln!("failed to prune unknown providers: {error:#}");
             }
-            store.hydrate_provider_limits(&settings.provider_ids(), settings.history_retention_days)
+            store.hydrate_provider_limits(&settings)
         })
         .unwrap_or_else(|error| {
             eprintln!("failed to hydrate provider store: {error:#}");

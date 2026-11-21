@@ -105,6 +105,7 @@ pub(crate) enum PopupCommand {
     },
     Hide,
     SelectView(PopupView),
+    ReroutesChanged,
     /// Go to the page nearest an instance: Home when it shows the instance,
     /// otherwise the tab that does.
     SelectNearest(ProviderId),

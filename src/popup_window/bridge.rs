@@ -1004,29 +1004,40 @@ fn pump_taskbar_actions(settings_tx: &Sender<Settings>, ui: &mut UiState) -> boo
                 page,
                 dismiss_on_outside_click,
                 floating_slot,
+                reroute_alert,
             } => {
-                if popup::is_visible() {
-                    // The compact floating circle remains a true toggle even
-                    // while Settings is open. Taskbar widgets keep their live
-                    // preview behavior for editing.
+                let visible = popup::is_visible();
+                if let Some(slot) = floating_slot {
+                    let active = visible && !popup::is_closing();
+                    if active
+                        && !reroute_alert
+                        && crate::popup_window::floating_circle_slot() == Some(slot)
+                    {
+                        popup::hide();
+                    } else {
+                        if let Some(provider) = provider {
+                            crate::popup_window::request_floating_provider_view(provider, slot);
+                        } else {
+                            crate::popup_window::request_floating_home_view(slot);
+                        }
+                        if active {
+                            popup::enable_outside_dismiss();
+                        } else {
+                            flush_popup_ui(ui);
+                            popup::show_beside_dismissible(anchor.0, anchor.1);
+                        }
+                    }
+                } else if visible {
                     if dismiss_on_outside_click || !crate::settings_window::is_open() {
                         popup::hide();
                     }
                 } else {
                     use crate::settings::TaskbarClick;
-                    match (provider, page, floating_slot) {
-                        // A floating circle represents exactly one provider
-                        // account. Its detail card therefore opens that
-                        // provider's page regardless of the generic taskbar
-                        // click preference.
-                        (Some(provider), _, Some(slot)) => {
-                            crate::popup_window::request_floating_provider_view(provider, slot)
-                        }
-                        (_, _, Some(slot)) => crate::popup_window::request_floating_home_view(slot),
-                        (Some(provider), TaskbarClick::Nearest, None) => {
+                    match (provider, page) {
+                        (Some(provider), TaskbarClick::Nearest) => {
                             crate::popup_window::request_nearest_view(provider)
                         }
-                        (Some(provider), TaskbarClick::Tab, None) => {
+                        (Some(provider), TaskbarClick::Tab) => {
                             crate::popup_window::request_provider_view(provider)
                         }
                         _ => crate::popup_window::request_home_view(),

@@ -59,6 +59,7 @@ fn detected_providers(settings: &Settings) -> [bool; DRIVERS] {
             ),
             ProviderKind::DeepSeek => crate::deepseek::is_installed(instance.provider_id()),
             ProviderKind::QwenCode => crate::qwen_code::is_installed(path),
+            ProviderKind::WorkBuddy => crate::workbuddy::installed_app(path).is_some(),
             ProviderKind::DeepSeekHarness
             | ProviderKind::KimiCode
             | ProviderKind::VolcengineArk
@@ -158,6 +159,14 @@ fn apply_onboarding_choices(
                 && crate::instances::Capabilities::of(instance).auto_activation
             {
                 instance.auto_activation = automatic;
+            }
+        }
+        if driver == ProviderKind::Codex
+            && let Some(pair) = &settings.codex_profile_pair
+        {
+            let desktop = crate::instances::ProviderId::new(driver, &pair.desktop_id);
+            if let Some(instance) = settings.instance_mut(desktop) {
+                instance.enabled = enabled;
             }
         }
     }

@@ -415,7 +415,14 @@ fn handle_command(
             let _ = window.update(cx, |root, _, cx| root.begin_hide(cx));
         }
         PopupCommand::SelectView(view) => {
-            let _ = window.update(cx, |root, _, cx| root.select_view(view, cx));
+            let _ = window.update(cx, |root, _, cx| {
+                root.select_view(view, cx);
+                // Two circles may share a provider tab but have distinct actions.
+                cx.notify();
+            });
+        }
+        PopupCommand::ReroutesChanged => {
+            let _ = window.update(cx, |_, _, cx| cx.notify());
         }
         PopupCommand::SelectNearest(provider) => {
             let _ = window.update(cx, |root, _, cx| {

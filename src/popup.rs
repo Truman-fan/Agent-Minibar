@@ -202,6 +202,10 @@ pub fn show_beside_dismissible(anchor_x: i32, anchor_y: i32) {
     show(anchor_x, anchor_y, true, true);
 }
 
+pub(crate) fn enable_outside_dismiss() {
+    FORCE_OUTSIDE_DISMISS.store(true, Ordering::SeqCst);
+}
+
 fn show(anchor_x: i32, anchor_y: i32, beside: bool, force_outside_dismiss: bool) {
     // Optimistic: the tray bridge reads this flag before the GPUI thread has
     // processed the command, and a second tray click must toggle it closed.
